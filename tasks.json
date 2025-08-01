@@ -8,24 +8,6 @@
       "startTime": "2025-08-01T18:18:11.382Z",
       "elapsedTime": 0,
       "completedTime": "2025-08-01T18:26:31.686Z"
-    },
-    {
-      "id": "1754072348701",
-      "title": "First Task",
-      "description": "Just the beginning.",
-      "status": "completed",
-      "startTime": "2025-08-01T18:19:08.701Z",
-      "elapsedTime": 0,
-      "completedTime": "2025-08-01T18:21:36.592Z"
-    },
-    {
-      "id": "1754072464981",
-      "title": "Test Task",
-      "description": "This is a test task",
-      "status": "completed",
-      "startTime": "2025-08-01T18:21:04.981Z",
-      "elapsedTime": 0,
-      "completedTime": "2025-08-01T18:26:34.453Z"
     }
   ],
   "task_logs": [
@@ -37,45 +19,10 @@
       "isEditable": 1
     },
     {
-      "id": "1754072348704",
-      "taskId": "1754072348701",
-      "message": "Task created and started",
-      "timestamp": "2025-08-01T18:19:08.701Z",
-      "isEditable": 1
-    },
-    {
-      "id": "1754072464985",
-      "taskId": "1754072464981",
-      "message": "Task created and started",
-      "timestamp": "2025-08-01T18:21:04.981Z",
-      "isEditable": 1
-    },
-    {
-      "id": "1754072496594",
-      "taskId": "1754072348701",
-      "message": "Task completed",
-      "timestamp": "2025-08-01T18:21:36.594Z",
-      "isEditable": 1
-    },
-    {
-      "id": "1754072505643",
-      "taskId": "1754072464981",
-      "message": "created so many copies",
-      "timestamp": "2025-08-01T18:21:45.643Z",
-      "isEditable": 1
-    },
-    {
       "id": "1754072791688",
       "taskId": "1754072291382",
       "message": "Task completed",
       "timestamp": "2025-08-01T18:26:31.688Z",
-      "isEditable": 1
-    },
-    {
-      "id": "1754072794455",
-      "taskId": "1754072464981",
-      "message": "Task completed",
-      "timestamp": "2025-08-01T18:26:34.455Z",
       "isEditable": 1
     }
   ]

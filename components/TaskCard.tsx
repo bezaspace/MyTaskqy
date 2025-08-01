@@ -17,9 +17,10 @@ interface TaskCardProps {
   onAddLog: (taskId: string, message: string) => void;
   onUpdateLog: (taskId: string, logId: string, message: string) => void;
   onDeleteLog: (taskId: string, logId: string) => void;
+  onDelete: (taskId: string) => void;
 }
 
-export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onDeleteLog }: TaskCardProps) {
+export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onDeleteLog, onDelete }: TaskCardProps) {
   const [newLogMessage, setNewLogMessage] = useState('');
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [editingLogMessage, setEditingLogMessage] = useState('');
@@ -129,7 +130,17 @@ export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onD
               {task.description}
             </p>
           </div>
-          {getStatusBadge()}
+          <div className="flex items-center gap-2">
+            {getStatusBadge()}
+            <Button
+              onClick={() => onDelete(task.id)}
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-900/20"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
 

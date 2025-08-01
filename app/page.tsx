@@ -121,6 +121,14 @@ async function deleteLogAPI(taskId: string, logId: string): Promise<void> {
   if (!result.success) throw new Error(result.error);
 }
 
+async function deleteTaskAPI(taskId: string): Promise<void> {
+  const response = await fetch(`/api/tasks?id=${taskId}`, {
+    method: 'DELETE'
+  });
+  const result = await response.json();
+  if (!result.success) throw new Error(result.error);
+}
+
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -222,6 +230,15 @@ export default function Home() {
       await loadTasks(); // Refresh tasks
     } catch (error) {
       console.error('Failed to delete log:', error);
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    try {
+      await deleteTaskAPI(taskId);
+      await loadTasks(); // Refresh tasks
+    } catch (error) {
+      console.error('Failed to delete task:', error);
     }
   };
 
@@ -336,6 +353,7 @@ export default function Home() {
                   onAddLog={addLog}
                   onUpdateLog={updateLog}
                   onDeleteLog={deleteLog}
+                  onDelete={deleteTask}
                 />
               ))}
             </div>
@@ -359,6 +377,7 @@ export default function Home() {
                   onAddLog={addLog}
                   onUpdateLog={updateLog}
                   onDeleteLog={deleteLog}
+                  onDelete={deleteTask}
                 />
               ))}
             </div>
@@ -382,6 +401,7 @@ export default function Home() {
                   onAddLog={addLog}
                   onUpdateLog={updateLog}
                   onDeleteLog={deleteLog}
+                  onDelete={deleteTask}
                 />
               ))}
             </div>
