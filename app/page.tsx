@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Plus, Clock, Play, Square, CheckCircle } from 'lucide-react';
+import { Plus, Clock, Play, Square, CheckCircle, MessageSquare } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -267,6 +268,15 @@ export default function Home() {
             <p className="text-gray-400">Track your tasks with precision timing</p>
           </div>
           <div className="flex gap-3">
+            <Link href="/chat">
+              <Button 
+                variant="outline"
+                className="border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-black font-semibold"
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                AI Assistant
+              </Button>
+            </Link>
             <Button 
               onClick={() => setIsScheduleDialogOpen(true)}
               variant="outline"
