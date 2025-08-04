@@ -1,4 +1,3 @@
-import sqlite3 from 'sqlite3';
 import { initializeSQLiteDatabase, migrateFromJSON, DatabaseConnection } from './sqlite-setup';
 
 export interface Task {
@@ -52,13 +51,13 @@ class TaskDatabase {
   // Task operations
   async createTask(task: Task): Promise<Task> {
     const connection = await this.ensureConnection();
-    
+
     return new Promise((resolve, reject) => {
       const stmt = connection.db.prepare(`
         INSERT INTO tasks (id, title, description, status, startTime, scheduledStartTime, scheduledEndTime, completedTime, elapsedTime)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      
+
       stmt.run([
         task.id,
         task.title,
@@ -69,7 +68,7 @@ class TaskDatabase {
         task.scheduledEndTime || null,
         task.completedTime || null,
         task.elapsedTime
-      ], function(err) {
+      ], function (err) {
         stmt.finalize();
         if (err) {
           reject(err);
@@ -82,7 +81,7 @@ class TaskDatabase {
 
   async getAllTasksWithLogs(): Promise<TaskWithLogs[]> {
     const connection = await this.ensureConnection();
-    
+
     return new Promise((resolve, reject) => {
       connection.db.all(`
         SELECT * FROM tasks 
@@ -110,7 +109,7 @@ class TaskDatabase {
 
   async getTaskById(id: string): Promise<Task | null> {
     const connection = await this.ensureConnection();
-    
+
     return new Promise((resolve, reject) => {
       connection.db.get(`
         SELECT * FROM tasks WHERE id = ?
@@ -126,7 +125,7 @@ class TaskDatabase {
 
   async updateTask(id: string, updates: Partial<Task>): Promise<boolean> {
     const connection = await this.ensureConnection();
-    
+
     return new Promise((resolve, reject) => {
       // Build dynamic UPDATE query based on provided updates
       const fields = Object.keys(updates).filter(key => updates[key as keyof Task] !== undefined);
@@ -142,8 +141,8 @@ class TaskDatabase {
       const stmt = connection.db.prepare(`
         UPDATE tasks SET ${setClause} WHERE id = ?
       `);
-      
-      stmt.run(values, function(err) {
+
+      stmt.run(values, function (err) {
         stmt.finalize();
         if (err) {
           reject(err);
@@ -156,14 +155,14 @@ class TaskDatabase {
 
   async deleteTask(id: string): Promise<boolean> {
     const connection = await this.ensureConnection();
-    
+
     return new Promise((resolve, reject) => {
       // SQLite will handle CASCADE deletion of logs due to foreign key constraint
       const stmt = connection.db.prepare(`
         DELETE FROM tasks WHERE id = ?
       `);
-      
-      stmt.run([id], function(err) {
+
+      stmt.run([id], function (err) {
         stmt.finalize();
         if (err) {
           reject(err);
@@ -177,7 +176,7 @@ class TaskDatabase {
   // Task log operations
   async getTaskLogs(taskId: string): Promise<TaskLog[]> {
     const connection = await this.ensureConnection();
-    
+
     return new Promise((resolve, reject) => {
       connection.db.all(`
         SELECT * FROM task_logs 
@@ -195,20 +194,20 @@ class TaskDatabase {
 
   async addTaskLog(log: TaskLog): Promise<TaskLog> {
     const connection = await this.ensureConnection();
-    
+
     return new Promise((resolve, reject) => {
       const stmt = connection.db.prepare(`
         INSERT INTO task_logs (id, taskId, message, timestamp, isEditable)
         VALUES (?, ?, ?, ?, ?)
       `);
-      
+
       stmt.run([
         log.id,
         log.taskId,
         log.message,
         log.timestamp,
         log.isEditable
-      ], function(err) {
+      ], function (err) {
         stmt.finalize();
         if (err) {
           reject(err);
@@ -221,13 +220,13 @@ class TaskDatabase {
 
   async updateTaskLog(logId: string, message: string): Promise<boolean> {
     const connection = await this.ensureConnection();
-    
+
     return new Promise((resolve, reject) => {
       const stmt = connection.db.prepare(`
         UPDATE task_logs SET message = ? WHERE id = ?
       `);
-      
-      stmt.run([message, logId], function(err) {
+
+      stmt.run([message, logId], function (err) {
         stmt.finalize();
         if (err) {
           reject(err);
@@ -240,13 +239,13 @@ class TaskDatabase {
 
   async deleteTaskLog(logId: string): Promise<boolean> {
     const connection = await this.ensureConnection();
-    
+
     return new Promise((resolve, reject) => {
       const stmt = connection.db.prepare(`
         DELETE FROM task_logs WHERE id = ?
       `);
-      
-      stmt.run([logId], function(err) {
+
+      stmt.run([logId], function (err) {
         stmt.finalize();
         if (err) {
           reject(err);

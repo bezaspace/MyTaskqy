@@ -87,62 +87,74 @@ Take appropriate actions to help the user.`
       maxOutputTokens: 1000
     };
 
-    // Send request to Gemini
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents,
-      config
-    });
+    // Compositional function calling loop - allows chaining multiple function calls
+    let allFunctionCalls: any[] = [];
+    let allFunctionResults: any[] = [];
+    
+    // Loop until the model has no more function calls to make
+    while (true) {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents,
+        config
+      });
 
-    // Check if Gemini wants to call functions
-    if (response.functionCalls && response.functionCalls.length > 0) {
-      let finalResponse = '';
-      const functionResults = [];
-
-      // Execute all function calls
-      for (const functionCall of response.functionCalls) {
-        try {
-          const result = await executeTaskFunction(functionCall.name || '', functionCall.args);
-          functionResults.push({
-            name: functionCall.name || '',
-            result: result
-          });
-        } catch (error) {
-          console.error(`Error executing function ${functionCall.name}:`, error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-          functionResults.push({
-            name: functionCall.name || '',
-            result: { success: false, error: errorMessage }
-          });
+      // Check if Gemini wants to call functions
+      if (response.functionCalls && response.functionCalls.length > 0) {
+        // Store function calls for final response
+        allFunctionCalls.push(...response.functionCalls);
+        
+        // Execute all function calls in this turn
+        const currentTurnResults = [];
+        for (const functionCall of response.functionCalls) {
+          try {
+            const result = await executeTaskFunction(functionCall.name || '', functionCall.args);
+            currentTurnResults.push({
+              name: functionCall.name || '',
+              result: result
+            });
+          } catch (error) {
+            console.error(`Error executing function ${functionCall.name}:`, error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            currentTurnResults.push({
+              name: functionCall.name || '',
+              result: { success: false, error: errorMessage }
+            });
+          }
         }
-      }
 
-      // Send function results back to Gemini for a natural response
-      const followUpContents = [
-        ...contents,
-        {
+        // Store results for final response
+        allFunctionResults.push(...currentTurnResults);
+
+        // Add the model's function calls to conversation
+        contents.push({
           role: 'model' as const,
           parts: response.functionCalls.map(fc => ({ functionCall: fc }))
-        },
-        {
+        });
+
+        // Add function results to conversation
+        contents.push({
           role: 'user' as const,
-          parts: functionResults.map(result => ({
+          parts: currentTurnResults.map(result => ({
             functionResponse: {
               name: result.name,
               response: { result: result.result }
             }
           }))
-        }
-      ];
+        });
 
-      const finalResponseFromAI = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-          ...followUpContents,
-          {
+        // Continue the loop to see if model wants to make more function calls
+        continue;
+      } else {
+        // No more function calls, get final response
+        let finalResponse = response.text || 'Task operation completed successfully.';
+
+        // If we executed functions, enhance the response
+        if (allFunctionCalls.length > 0) {
+          const enhancedResponsePrompt = {
             role: 'user' as const,
             parts: [{
-              text: `Based on the function results above, provide a natural, helpful response. Include:
+              text: `Based on the function calls and results above, provide a natural, helpful response. Include:
               1. Confirmation of what was accomplished
               2. Relevant details from the results
               3. Proactive suggestions for next steps or related actions
@@ -150,29 +162,28 @@ Take appropriate actions to help the user.`
               
               Make it conversational and human-like, not robotic. If there were any errors, explain them clearly and suggest solutions.`
             }]
-          }
-        ],
-        config: {
-          temperature: 0.7,
-          maxOutputTokens: 1000
+          };
+
+          const enhancedResponse = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [...contents, enhancedResponsePrompt],
+            config: {
+              temperature: 0.7,
+              maxOutputTokens: 1000
+            }
+          });
+
+          finalResponse = enhancedResponse.text || finalResponse;
         }
-      });
 
-      finalResponse = finalResponseFromAI.text || 'Task operation completed successfully.';
-
-      return NextResponse.json({
-        success: true,
-        response: finalResponse,
-        functionCalls: response.functionCalls,
-        functionResults
-      });
+        return NextResponse.json({
+          success: true,
+          response: finalResponse,
+          functionCalls: allFunctionCalls,
+          functionResults: allFunctionResults
+        });
+      }
     }
-
-    // No function calls, return direct response
-    return NextResponse.json({
-      success: true,
-      response: response.text || 'I understand. How can I help you with your tasks?'
-    });
 
   } catch (error) {
     console.error('Error in chat API:', error);
