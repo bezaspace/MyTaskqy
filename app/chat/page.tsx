@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChatMessage } from '@/components/ChatMessage';
+import { VoiceInput } from '@/components/VoiceInput';
 import Link from 'next/link';
 
 interface Message {
@@ -13,6 +14,11 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  audioMetadata?: {
+    transcription: string;
+    duration: number;
+    originalAudio?: boolean;
+  };
 }
 
 export default function ChatPage() {
@@ -33,14 +39,16 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const sendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return;
+  const sendMessage = async (messageContent?: string, audioMetadata?: any) => {
+    const content = messageContent || inputMessage.trim();
+    if (!content || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputMessage.trim(),
-      timestamp: new Date()
+      content,
+      timestamp: new Date(),
+      audioMetadata
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -55,7 +63,8 @@ export default function ChatPage() {
         },
         body: JSON.stringify({
           message: userMessage.content,
-          conversationHistory: messages
+          conversationHistory: messages,
+          audioMetadata: userMessage.audioMetadata
         })
       });
 
@@ -100,6 +109,10 @@ export default function ChatPage() {
       e.preventDefault();
       sendMessage();
     }
+  };
+
+  const handleVoiceTranscription = (transcription: string, audioMetadata: any) => {
+    sendMessage(transcription, audioMetadata);
   };
 
   return (
@@ -170,8 +183,12 @@ export default function ChatPage() {
                   className="flex-1 bg-zinc-900 border-zinc-700 text-white placeholder-gray-400 focus:border-yellow-400"
                   disabled={isLoading}
                 />
+                <VoiceInput 
+                  onTranscription={handleVoiceTranscription}
+                  disabled={isLoading}
+                />
                 <Button
-                  onClick={sendMessage}
+                  onClick={() => sendMessage()}
                   disabled={!inputMessage.trim() || isLoading}
                   className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-6"
                 >

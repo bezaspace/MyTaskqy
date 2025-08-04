@@ -9,7 +9,7 @@ const ai = new GoogleGenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, conversationHistory } = await request.json();
+    const { message, conversationHistory, audioMetadata } = await request.json();
 
     if (!message) {
       return NextResponse.json(
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 - Suggest next steps
 - Stay focused on task management
 
-User message: "${message}"
+User message: "${message}"${audioMetadata ? `\n\n[Note: This message was transcribed from voice input]` : ''}
 
 Take appropriate actions to help the user.`
         }]

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, User } from 'lucide-react';
+import { Bot, User, Mic } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
 
@@ -10,6 +10,11 @@ interface ChatMessageProps {
     role: 'user' | 'assistant';
     content: string;
     timestamp: Date;
+    audioMetadata?: {
+      transcription: string;
+      duration: number;
+      originalAudio?: boolean;
+    };
   };
 }
 
@@ -49,9 +54,23 @@ export function ChatMessage({ message }: ChatMessageProps) {
           : 'bg-zinc-900 border-zinc-800 text-white'
       }`}>
         <CardContent className="p-3">
+          {/* Audio indicator for voice messages */}
+          {message.audioMetadata?.originalAudio && (
+            <div className={`flex items-center gap-2 mb-2 text-xs ${
+              isUser ? 'text-black/70' : 'text-gray-400'
+            }`}>
+              <Mic className="w-3 h-3" />
+              <span>Voice message</span>
+              {message.audioMetadata.duration && (
+                <span>({Math.round(message.audioMetadata.duration)}s)</span>
+              )}
+            </div>
+          )}
+          
           <div className="whitespace-pre-wrap text-sm leading-relaxed">
             {message.content}
           </div>
+          
           <div className={`text-xs mt-2 ${
             isUser ? 'text-black/70' : 'text-gray-400'
           }`}>
