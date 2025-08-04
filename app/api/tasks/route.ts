@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initDatabase, getAllTasks, createTask, updateTask, deleteTask, startTask, completeTask, addTaskLog, updateTaskLog, deleteTaskLog } from '@/lib/database';
 
 // Initialize database on module load
-initDatabase();
+let dbInitialized = false;
+const ensureDbInitialized = async () => {
+  if (!dbInitialized) {
+    await initDatabase();
+    dbInitialized = true;
+  }
+};
 
 export async function GET(request: NextRequest) {
   try {
+    await ensureDbInitialized();
     const tasks = await getAllTasks();
     return NextResponse.json({ success: true, data: tasks });
   } catch (error) {
@@ -19,6 +26,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureDbInitialized();
     const url = new URL(request.url);
     const action = url.searchParams.get('action');
     const taskId = url.searchParams.get('id');
@@ -26,13 +34,13 @@ export async function POST(request: NextRequest) {
 
     if (action === 'start' && taskId) {
       // Start a scheduled task
-      const task = startTask(taskId);
+      const task = await startTask(taskId);
       return NextResponse.json({ success: true, data: task });
     }
 
     if (action === 'complete' && taskId) {
       // Complete a task
-      const task = completeTask(taskId);
+      const task = await completeTask(taskId);
       return NextResponse.json({ success: true, data: task });
     }
 
@@ -48,7 +56,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const log = addTaskLog(taskId, message);
+      const log = await addTaskLog(taskId, message);
       return NextResponse.json({ success: true, data: log });
     }
 
@@ -63,7 +71,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const task = createTask({
+    const task = await createTask({
       title,
       description: description || '',
       scheduledStartTime,
@@ -82,6 +90,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    await ensureDbInitialized();
     const url = new URL(request.url);
     const action = url.searchParams.get('action');
     const taskId = url.searchParams.get('id');
@@ -99,7 +108,7 @@ export async function PUT(request: NextRequest) {
         );
       }
 
-      const log = updateTaskLog(taskId, logId, message);
+      const log = await updateTaskLog(taskId, logId, message);
       return NextResponse.json({ success: true, data: log });
     }
 
@@ -112,7 +121,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const task = updateTask(taskId, body);
+    const task = await updateTask(taskId, body);
     return NextResponse.json({ success: true, data: task });
   } catch (error) {
     console.error('Error in PUT request:', error);
@@ -125,6 +134,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    await ensureDbInitialized();
     const url = new URL(request.url);
     const action = url.searchParams.get('action');
     const taskId = url.searchParams.get('id');
@@ -132,7 +142,7 @@ export async function DELETE(request: NextRequest) {
 
     if (action === 'deleteLog' && taskId && logId) {
       // Delete task log
-      deleteTaskLog(taskId, logId);
+      await deleteTaskLog(taskId, logId);
       return NextResponse.json({ success: true });
     }
 
@@ -144,7 +154,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    deleteTask(taskId);
+    await deleteTask(taskId);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error in DELETE request:', error);

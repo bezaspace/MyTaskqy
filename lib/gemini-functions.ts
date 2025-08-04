@@ -1,28 +1,28 @@
 import { Type } from '@google/genai';
 
-// Function declarations for Gemini AI to understand available task operations
+// Concise function declarations for task management
 export const taskFunctions = [
   {
     name: 'create_task',
-    description: 'Creates a new task with title and description. Can optionally schedule it for later.',
+    description: 'Create a new task when user mentions "I need to", "I should", or similar intent. Parse natural language times.',
     parameters: {
       type: Type.OBJECT,
       properties: {
         title: {
           type: Type.STRING,
-          description: 'The title of the task'
+          description: 'Actionable task title'
         },
         description: {
           type: Type.STRING,
-          description: 'Detailed description of the task'
+          description: 'Task details and context'
         },
         scheduledStartTime: {
           type: Type.STRING,
-          description: 'Optional ISO date string for when the task should start (e.g., "2024-01-15T14:00:00.000Z")'
+          description: 'ISO date string for start time (parse natural language)'
         },
         scheduledEndTime: {
           type: Type.STRING,
-          description: 'Optional ISO date string for when the task should end (e.g., "2024-01-15T16:00:00.000Z")'
+          description: 'ISO date string for end time if specified'
         }
       },
       required: ['title', 'description']
@@ -30,14 +30,14 @@ export const taskFunctions = [
   },
   {
     name: 'get_tasks',
-    description: 'Retrieves tasks based on status filter. Returns all tasks if no status specified.',
+    description: 'Retrieve tasks for context. Call first when user asks about tasks or productivity.',
     parameters: {
       type: Type.OBJECT,
       properties: {
         status: {
           type: Type.STRING,
           enum: ['scheduled', 'in-progress', 'completed'],
-          description: 'Filter tasks by status. Leave empty to get all tasks.'
+          description: 'Filter by status. Leave empty for all tasks.'
         }
       },
       required: []
@@ -45,13 +45,13 @@ export const taskFunctions = [
   },
   {
     name: 'start_task',
-    description: 'Starts a scheduled task, changing its status to in-progress.',
+    description: 'Start a scheduled task when user says "I\'m starting", "Let me work on", or similar.',
     parameters: {
       type: Type.OBJECT,
       properties: {
         taskId: {
           type: Type.STRING,
-          description: 'The ID of the task to start'
+          description: 'ID of task to start (get from get_tasks first)'
         }
       },
       required: ['taskId']
@@ -59,13 +59,13 @@ export const taskFunctions = [
   },
   {
     name: 'complete_task',
-    description: 'Marks a task as completed.',
+    description: 'Mark task as completed when user says "done", "finished", or similar completion language.',
     parameters: {
       type: Type.OBJECT,
       properties: {
         taskId: {
           type: Type.STRING,
-          description: 'The ID of the task to complete'
+          description: 'ID of task to complete (get from get_tasks first)'
         }
       },
       required: ['taskId']
@@ -73,13 +73,13 @@ export const taskFunctions = [
   },
   {
     name: 'delete_task',
-    description: 'Permanently deletes a task and all its logs.',
+    description: 'Delete a task when user says "delete", "remove", or similar removal language.',
     parameters: {
       type: Type.OBJECT,
       properties: {
         taskId: {
           type: Type.STRING,
-          description: 'The ID of the task to delete'
+          description: 'ID of task to delete (get from get_tasks first)'
         }
       },
       required: ['taskId']
@@ -87,17 +87,17 @@ export const taskFunctions = [
   },
   {
     name: 'add_task_log',
-    description: 'Adds a log entry to an existing task.',
+    description: 'Add progress note when user says "I made progress", "I\'m stuck", or "log this".',
     parameters: {
       type: Type.OBJECT,
       properties: {
         taskId: {
           type: Type.STRING,
-          description: 'The ID of the task to add log to'
+          description: 'ID of task to add log to (get from get_tasks first)'
         },
         message: {
           type: Type.STRING,
-          description: 'The log message to add'
+          description: 'Progress update or note'
         }
       },
       required: ['taskId', 'message']
@@ -107,8 +107,8 @@ export const taskFunctions = [
 
 // Helper function to execute task operations
 export async function executeTaskFunction(functionName: string, args: any) {
-  const baseUrl = process.env.NODE_ENV === 'production' 
-    ? 'https://your-domain.com' 
+  const baseUrl = process.env.NODE_ENV === 'production'
+    ? 'https://your-domain.com'
     : 'http://localhost:3000';
 
   switch (functionName) {
@@ -123,7 +123,7 @@ export async function executeTaskFunction(functionName: string, args: any) {
     case 'get_tasks':
       const getResponse = await fetch(`${baseUrl}/api/tasks`);
       const tasksResult = await getResponse.json();
-      
+
       if (args.status && tasksResult.success) {
         const filteredTasks = tasksResult.data.filter((task: any) => task.status === args.status);
         return { success: true, data: filteredTasks };

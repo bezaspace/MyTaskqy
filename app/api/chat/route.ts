@@ -25,24 +25,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prepare conversation contents
+    // Prepare conversation contents with concise system prompt
     const contents = [
       {
         role: 'user' as const,
         parts: [{
-          text: `You are a helpful AI assistant for a task management application. You can help users create, manage, and track their tasks through natural conversation.
+          text: `You are a task management AI assistant. Understand user intent and help accomplish goals.
 
-Available functions:
-- create_task: Create new tasks with optional scheduling
-- get_tasks: Retrieve tasks (all or filtered by status)
-- start_task: Start a scheduled task
-- complete_task: Mark a task as completed
-- delete_task: Delete a task permanently
-- add_task_log: Add notes/logs to existing tasks
+**Core Capabilities:**
+- Create tasks for "I need to", "I should", or similar intent
+- Recognize scheduling: "tomorrow", "next week", "at 3pm", etc.
+- Handle status: "done", "finished", "working on", "started"
+- Track progress: "I made progress", "I'm stuck", "log this", "first I need to"
 
-When users ask about tasks, be conversational and helpful. Format task information clearly and provide useful summaries.
+**Tool Usage Rules:**
+1. ALWAYS call get_tasks() first when user asks about tasks or mentions existing tasks
+2. Use create_task() for new tasks with actionable titles and descriptions
+3. Use start_task(), complete_task(), delete_task() for status changes
+4. Use add_task_log() for progress updates and notes
+5. Chain functions: get_tasks() → action → add_task_log() when appropriate
+6. Parse natural times to ISO format
+7. Get task IDs from get_tasks() before using in other functions
 
-Current user message: ${message}`
+**Response Guidelines:**
+- Be direct and concise
+- Confirm actions taken
+- Suggest next steps
+- Stay focused on task management
+
+User message: "${message}"
+
+Take appropriate actions to help the user.`
         }]
       }
     ];
@@ -53,11 +66,11 @@ Current user message: ${message}`
       const recentHistory = conversationHistory.slice(-10);
       for (const msg of recentHistory) {
         contents.push({
-          role: msg.role === 'user' ? 'user' : 'model',
+          role: msg.role === 'user' ? 'user' as const : 'model' as const,
           parts: [{ text: msg.content }]
         });
       }
-      
+
       // Add current message
       contents.push({
         role: 'user' as const,
@@ -89,16 +102,17 @@ Current user message: ${message}`
       // Execute all function calls
       for (const functionCall of response.functionCalls) {
         try {
-          const result = await executeTaskFunction(functionCall.name, functionCall.args);
+          const result = await executeTaskFunction(functionCall.name || '', functionCall.args);
           functionResults.push({
-            name: functionCall.name,
+            name: functionCall.name || '',
             result: result
           });
         } catch (error) {
           console.error(`Error executing function ${functionCall.name}:`, error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
           functionResults.push({
-            name: functionCall.name,
-            result: { success: false, error: error.message }
+            name: functionCall.name || '',
+            result: { success: false, error: errorMessage }
           });
         }
       }
@@ -123,7 +137,21 @@ Current user message: ${message}`
 
       const finalResponseFromAI = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: followUpContents,
+        contents: [
+          ...followUpContents,
+          {
+            role: 'user' as const,
+            parts: [{
+              text: `Based on the function results above, provide a natural, helpful response. Include:
+              1. Confirmation of what was accomplished
+              2. Relevant details from the results
+              3. Proactive suggestions for next steps or related actions
+              4. Encouraging tone that keeps the user motivated
+              
+              Make it conversational and human-like, not robotic. If there were any errors, explain them clearly and suggest solutions.`
+            }]
+          }
+        ],
         config: {
           temperature: 0.7,
           maxOutputTokens: 1000
@@ -148,11 +176,12 @@ Current user message: ${message}`
 
   } catch (error) {
     console.error('Error in chat API:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to process chat request',
-        details: error.message 
+        details: errorMessage
       },
       { status: 500 }
     );

@@ -1,5 +1,5 @@
-import path from 'path';
-import fs from 'fs';
+import sqlite3 from 'sqlite3';
+import { initializeSQLiteDatabase, migrateFromJSON, DatabaseConnection } from './sqlite-setup';
 
 export interface Task {
   id: string;
@@ -25,208 +25,261 @@ export interface TaskWithLogs extends Task {
   logs: TaskLog[];
 }
 
-interface DatabaseData {
-  tasks: Task[];
-  task_logs: TaskLog[];
-}
-
 class TaskDatabase {
-  private data: DatabaseData;
-  private dbPath: string;
+  private connection: DatabaseConnection | null = null;
 
   constructor() {
-    this.dbPath = path.join(process.cwd(), 'tasks.json');
-    this.loadDatabase();
+    this.initializeDatabase();
   }
 
-  private loadDatabase() {
+  private async initializeDatabase() {
     try {
-      if (fs.existsSync(this.dbPath)) {
-        const fileContent = fs.readFileSync(this.dbPath, 'utf8');
-        this.data = JSON.parse(fileContent);
-      } else {
-        this.data = { tasks: [], task_logs: [] };
-        this.saveDatabase();
-      }
+      this.connection = await initializeSQLiteDatabase();
+      await migrateFromJSON(this.connection);
     } catch (error) {
-      console.error('Error loading database:', error);
-      this.data = { tasks: [], task_logs: [] };
+      console.error('Error initializing database:', error);
+      throw error;
     }
   }
 
-  private saveDatabase() {
-    try {
-      fs.writeFileSync(this.dbPath, JSON.stringify(this.data, null, 2));
-    } catch (error) {
-      console.error('Error saving database:', error);
+  private async ensureConnection(): Promise<DatabaseConnection> {
+    if (!this.connection) {
+      this.connection = await initializeSQLiteDatabase();
     }
+    return this.connection;
   }
 
   // Task operations
-  createTask(task: Task): Promise<Task> {
+  async createTask(task: Task): Promise<Task> {
+    const connection = await this.ensureConnection();
+    
     return new Promise((resolve, reject) => {
-      try {
-        this.data.tasks.push(task);
-        this.saveDatabase();
-        resolve(task);
-      } catch (error) {
-        reject(error);
-      }
+      const stmt = connection.db.prepare(`
+        INSERT INTO tasks (id, title, description, status, startTime, scheduledStartTime, scheduledEndTime, completedTime, elapsedTime)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      stmt.run([
+        task.id,
+        task.title,
+        task.description,
+        task.status,
+        task.startTime,
+        task.scheduledStartTime || null,
+        task.scheduledEndTime || null,
+        task.completedTime || null,
+        task.elapsedTime
+      ], function(err) {
+        stmt.finalize();
+        if (err) {
+          reject(err);
+        } else {
+          resolve(task);
+        }
+      });
     });
   }
 
-  getAllTasksWithLogs(): Promise<TaskWithLogs[]> {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const tasks = [...this.data.tasks].sort((a, b) => 
-          new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-        );
-        
-        const tasksWithLogs = await Promise.all(
-          tasks.map(async task => ({
-            ...task,
-            logs: await this.getTaskLogs(task.id)
-          }))
-        );
-        
-        resolve(tasksWithLogs);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
-
-  getTaskById(id: string): Promise<Task | null> {
+  async getAllTasksWithLogs(): Promise<TaskWithLogs[]> {
+    const connection = await this.ensureConnection();
+    
     return new Promise((resolve, reject) => {
-      try {
-        const task = this.data.tasks.find(t => t.id === id);
-        resolve(task || null);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
-
-  updateTask(id: string, updates: Partial<Task>): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      try {
-        const taskIndex = this.data.tasks.findIndex(t => t.id === id);
-        if (taskIndex === -1) {
-          resolve(false);
+      connection.db.all(`
+        SELECT * FROM tasks 
+        ORDER BY startTime DESC
+      `, async (err, tasks: any[]) => {
+        if (err) {
+          reject(err);
           return;
         }
 
-        this.data.tasks[taskIndex] = { ...this.data.tasks[taskIndex], ...updates };
-        this.saveDatabase();
-        resolve(true);
-      } catch (error) {
-        reject(error);
-      }
+        try {
+          const tasksWithLogs = await Promise.all(
+            tasks.map(async task => ({
+              ...task,
+              logs: await this.getTaskLogs(task.id)
+            }))
+          );
+          resolve(tasksWithLogs);
+        } catch (error) {
+          reject(error);
+        }
+      });
     });
   }
 
-  deleteTask(id: string): Promise<boolean> {
+  async getTaskById(id: string): Promise<Task | null> {
+    const connection = await this.ensureConnection();
+    
     return new Promise((resolve, reject) => {
-      try {
-        const taskIndex = this.data.tasks.findIndex(t => t.id === id);
-        if (taskIndex === -1) {
-          resolve(false);
-          return;
+      connection.db.get(`
+        SELECT * FROM tasks WHERE id = ?
+      `, [id], (err, task: any) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(task || null);
         }
+      });
+    });
+  }
 
-        this.data.tasks.splice(taskIndex, 1);
-        // Also delete related logs
-        this.data.task_logs = this.data.task_logs.filter(log => log.taskId !== id);
-        this.saveDatabase();
-        resolve(true);
-      } catch (error) {
-        reject(error);
+  async updateTask(id: string, updates: Partial<Task>): Promise<boolean> {
+    const connection = await this.ensureConnection();
+    
+    return new Promise((resolve, reject) => {
+      // Build dynamic UPDATE query based on provided updates
+      const fields = Object.keys(updates).filter(key => updates[key as keyof Task] !== undefined);
+      if (fields.length === 0) {
+        resolve(false);
+        return;
       }
+
+      const setClause = fields.map(field => `${field} = ?`).join(', ');
+      const values = fields.map(field => updates[field as keyof Task]);
+      values.push(id);
+
+      const stmt = connection.db.prepare(`
+        UPDATE tasks SET ${setClause} WHERE id = ?
+      `);
+      
+      stmt.run(values, function(err) {
+        stmt.finalize();
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.changes > 0);
+        }
+      });
+    });
+  }
+
+  async deleteTask(id: string): Promise<boolean> {
+    const connection = await this.ensureConnection();
+    
+    return new Promise((resolve, reject) => {
+      // SQLite will handle CASCADE deletion of logs due to foreign key constraint
+      const stmt = connection.db.prepare(`
+        DELETE FROM tasks WHERE id = ?
+      `);
+      
+      stmt.run([id], function(err) {
+        stmt.finalize();
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.changes > 0);
+        }
+      });
     });
   }
 
   // Task log operations
-  getTaskLogs(taskId: string): Promise<TaskLog[]> {
+  async getTaskLogs(taskId: string): Promise<TaskLog[]> {
+    const connection = await this.ensureConnection();
+    
     return new Promise((resolve, reject) => {
-      try {
-        const logs = this.data.task_logs
-          .filter(log => log.taskId === taskId)
-          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-        resolve(logs);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
-
-  addTaskLog(log: TaskLog): Promise<TaskLog> {
-    return new Promise((resolve, reject) => {
-      try {
-        this.data.task_logs.push(log);
-        this.saveDatabase();
-        resolve(log);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
-
-  updateTaskLog(logId: string, message: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      try {
-        const logIndex = this.data.task_logs.findIndex(log => log.id === logId);
-        if (logIndex === -1) {
-          resolve(false);
-          return;
+      connection.db.all(`
+        SELECT * FROM task_logs 
+        WHERE taskId = ? 
+        ORDER BY timestamp ASC
+      `, [taskId], (err, logs: any[]) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(logs || []);
         }
-
-        this.data.task_logs[logIndex].message = message;
-        this.saveDatabase();
-        resolve(true);
-      } catch (error) {
-        reject(error);
-      }
+      });
     });
   }
 
-  deleteTaskLog(logId: string): Promise<boolean> {
+  async addTaskLog(log: TaskLog): Promise<TaskLog> {
+    const connection = await this.ensureConnection();
+    
     return new Promise((resolve, reject) => {
-      try {
-        const logIndex = this.data.task_logs.findIndex(log => log.id === logId);
-        if (logIndex === -1) {
-          resolve(false);
-          return;
+      const stmt = connection.db.prepare(`
+        INSERT INTO task_logs (id, taskId, message, timestamp, isEditable)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      
+      stmt.run([
+        log.id,
+        log.taskId,
+        log.message,
+        log.timestamp,
+        log.isEditable
+      ], function(err) {
+        stmt.finalize();
+        if (err) {
+          reject(err);
+        } else {
+          resolve(log);
         }
+      });
+    });
+  }
 
-        this.data.task_logs.splice(logIndex, 1);
-        this.saveDatabase();
-        resolve(true);
-      } catch (error) {
-        reject(error);
-      }
+  async updateTaskLog(logId: string, message: string): Promise<boolean> {
+    const connection = await this.ensureConnection();
+    
+    return new Promise((resolve, reject) => {
+      const stmt = connection.db.prepare(`
+        UPDATE task_logs SET message = ? WHERE id = ?
+      `);
+      
+      stmt.run([message, logId], function(err) {
+        stmt.finalize();
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.changes > 0);
+        }
+      });
+    });
+  }
+
+  async deleteTaskLog(logId: string): Promise<boolean> {
+    const connection = await this.ensureConnection();
+    
+    return new Promise((resolve, reject) => {
+      const stmt = connection.db.prepare(`
+        DELETE FROM task_logs WHERE id = ?
+      `);
+      
+      stmt.run([logId], function(err) {
+        stmt.finalize();
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.changes > 0);
+        }
+      });
     });
   }
 
   // Helper methods for specific operations
   async startTask(taskId: string): Promise<boolean> {
     const startTime = new Date().toISOString();
-    return await this.updateTask(taskId, { 
-      status: 'in-progress', 
+    return await this.updateTask(taskId, {
+      status: 'in-progress',
       startTime,
-      elapsedTime: 0 
+      elapsedTime: 0
     });
   }
 
   async completeTask(taskId: string): Promise<boolean> {
     const completedTime = new Date().toISOString();
-    return await this.updateTask(taskId, { 
-      status: 'completed', 
-      completedTime 
+    return await this.updateTask(taskId, {
+      status: 'completed',
+      completedTime
     });
   }
 
-  close() {
-    this.db.close();
+  async close() {
+    if (this.connection) {
+      await this.connection.close();
+      this.connection = null;
+    }
   }
 }
 
@@ -241,8 +294,10 @@ export function getDatabase(): TaskDatabase {
 }
 
 // Export functions for API routes
-export function initDatabase() {
-  getDatabase();
+export async function initDatabase() {
+  const db = getDatabase();
+  // Ensure database is initialized
+  await db.initializeDatabase();
 }
 
 export async function getAllTasks(): Promise<TaskWithLogs[]> {
@@ -253,7 +308,7 @@ export async function createTask(data: { title: string; description: string; sch
   const db = getDatabase();
   const now = new Date().toISOString();
   const taskId = Date.now().toString();
-  
+
   const task: Task = {
     id: taskId,
     title: data.title,
@@ -266,7 +321,7 @@ export async function createTask(data: { title: string; description: string; sch
   };
 
   await db.createTask(task);
-  
+
   // Add initial log
   const logMessage = data.scheduledStartTime ? 'Task scheduled' : 'Task created and started';
   const log: TaskLog = {
@@ -276,9 +331,9 @@ export async function createTask(data: { title: string; description: string; sch
     timestamp: now,
     isEditable: 1
   };
-  
+
   await db.addTaskLog(log);
-  
+
   return {
     ...task,
     logs: [log]
@@ -289,10 +344,10 @@ export async function updateTask(taskId: string, updates: Partial<Task>): Promis
   const db = getDatabase();
   const success = await db.updateTask(taskId, updates);
   if (!success) return null;
-  
+
   const task = await db.getTaskById(taskId);
   if (!task) return null;
-  
+
   return {
     ...task,
     logs: await db.getTaskLogs(taskId)
@@ -307,7 +362,7 @@ export async function startTask(taskId: string): Promise<TaskWithLogs | null> {
   const db = getDatabase();
   const success = await db.startTask(taskId);
   if (!success) return null;
-  
+
   // Add log
   const log: TaskLog = {
     id: Date.now().toString(),
@@ -317,10 +372,10 @@ export async function startTask(taskId: string): Promise<TaskWithLogs | null> {
     isEditable: 1
   };
   await db.addTaskLog(log);
-  
+
   const task = await db.getTaskById(taskId);
   if (!task) return null;
-  
+
   return {
     ...task,
     logs: await db.getTaskLogs(taskId)
@@ -331,7 +386,7 @@ export async function completeTask(taskId: string): Promise<TaskWithLogs | null>
   const db = getDatabase();
   const success = await db.completeTask(taskId);
   if (!success) return null;
-  
+
   // Add log
   const log: TaskLog = {
     id: Date.now().toString(),
@@ -341,10 +396,10 @@ export async function completeTask(taskId: string): Promise<TaskWithLogs | null>
     isEditable: 1
   };
   await db.addTaskLog(log);
-  
+
   const task = await db.getTaskById(taskId);
   if (!task) return null;
-  
+
   return {
     ...task,
     logs: await db.getTaskLogs(taskId)
@@ -360,7 +415,7 @@ export async function addTaskLog(taskId: string, message: string): Promise<TaskL
     timestamp: new Date().toISOString(),
     isEditable: 1
   };
-  
+
   return await db.addTaskLog(log);
 }
 
@@ -368,7 +423,7 @@ export async function updateTaskLog(taskId: string, logId: string, message: stri
   const db = getDatabase();
   const success = await db.updateTaskLog(logId, message);
   if (!success) return null;
-  
+
   const logs = await db.getTaskLogs(taskId);
   return logs.find(log => log.id === logId) || null;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Plus, Clock, Play, Square, CheckCircle, MessageSquare } from 'lucide-react';
+import { Plus, Clock, Play, Square, CheckCircle, MessageSquare, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -268,6 +268,15 @@ export default function Home() {
             <p className="text-gray-400">Track your tasks with precision timing</p>
           </div>
           <div className="flex gap-3">
+            <Link href="/timeline">
+              <Button 
+                variant="outline"
+                className="border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-black font-semibold"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Timeline View
+              </Button>
+            </Link>
             <Link href="/chat">
               <Button 
                 variant="outline"
