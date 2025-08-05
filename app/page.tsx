@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TaskCard } from '@/components/TaskCard';
+import { EditTaskDialog } from '@/components/EditTaskDialog';
 import { CreateTaskDialog } from '@/components/CreateTaskDialog';
 import { ScheduleTaskDialog } from '@/components/ScheduleTaskDialog';
 
@@ -70,8 +71,8 @@ async function scheduleTaskAPI(title: string, description: string, scheduledStar
     body: JSON.stringify({ 
       title, 
       description, 
-      scheduledStartTime: scheduledStart.toISOString(),
-      scheduledEndTime: scheduledEnd.toISOString()
+      scheduledStart: scheduledStart.toISOString(), 
+      scheduledEnd: scheduledEnd.toISOString() 
     })
   });
   const result = await response.json();
@@ -80,7 +81,7 @@ async function scheduleTaskAPI(title: string, description: string, scheduledStar
 
 async function startTaskAPI(taskId: string): Promise<void> {
   const response = await fetch(`/api/tasks?action=start&id=${taskId}`, {
-    method: 'POST'
+    method: 'PUT'
   });
   const result = await response.json();
   if (!result.success) throw new Error(result.error);
@@ -88,7 +89,7 @@ async function startTaskAPI(taskId: string): Promise<void> {
 
 async function completeTaskAPI(taskId: string): Promise<void> {
   const response = await fetch(`/api/tasks?action=complete&id=${taskId}`, {
-    method: 'POST'
+    method: 'PUT'
   });
   const result = await response.json();
   if (!result.success) throw new Error(result.error);
@@ -129,12 +130,42 @@ async function deleteTaskAPI(taskId: string): Promise<void> {
   const result = await response.json();
   if (!result.success) throw new Error(result.error);
 }
-
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  // Edit task handler
+  const handleEditTask = (task: Task) => {
+    setSelectedTask(task);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateTask = async (updates: Partial<Task>) => {
+    if (!updates.id) return;
+    setEditLoading(true);
+    try {
+      const response = await fetch(`/api/tasks?id=${updates.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
+      await loadTasks();
+      setSelectedTask(null);
+    } catch (error) {
+      alert('Failed to update task.');
+      console.error(error);
+    } finally {
+      setEditLoading(false);
+      setEditDialogOpen(false);
+    }
+  };
 
   // Load tasks on component mount
   useEffect(() => {
@@ -155,7 +186,6 @@ export default function Home() {
         })
       );
     }, 1000);
-
     return () => clearInterval(interval);
   }, []);
 
@@ -247,26 +277,20 @@ export default function Home() {
   const inProgressTasks = tasks.filter(task => task.status === 'in-progress');
   const completedTasks = tasks.filter(task => task.status === 'completed');
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <Clock className="w-16 h-16 text-yellow-400 mx-auto mb-4 animate-spin" />
-          <p className="text-xl text-gray-400">Loading tasks...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-black text-white">
+      {loading ? (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Clock className="w-16 h-16 text-yellow-400 mx-auto mb-4 animate-spin" />
+            <p className="text-xl text-gray-400">Loading tasks...</p>
+          </div>
+        </div>
+      ) : (
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-white mb-2">Task Manager</h1>
-            <p className="text-gray-400">Track your tasks with precision timing</p>
-          </div>
+          <h1 className="text-4xl font-bold text-yellow-400">TaskMaster</h1>
           <div className="flex gap-3">
             <Link href="/timeline">
               <Button 
@@ -373,6 +397,7 @@ export default function Home() {
                   onUpdateLog={updateLog}
                   onDeleteLog={deleteLog}
                   onDelete={deleteTask}
+                  onEdit={handleEditTask}
                 />
               ))}
             </div>
@@ -397,6 +422,7 @@ export default function Home() {
                   onUpdateLog={updateLog}
                   onDeleteLog={deleteLog}
                   onDelete={deleteTask}
+                  onEdit={handleEditTask}
                 />
               ))}
             </div>
@@ -421,6 +447,7 @@ export default function Home() {
                   onUpdateLog={updateLog}
                   onDeleteLog={deleteLog}
                   onDelete={deleteTask}
+                  onEdit={handleEditTask}
                 />
               ))}
             </div>
@@ -452,19 +479,28 @@ export default function Home() {
             </div>
           </div>
         )}
-      </div>
-
-      <CreateTaskDialog 
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onCreateTask={createTask}
-      />
-      
-      <ScheduleTaskDialog 
-        open={isScheduleDialogOpen}
-        onOpenChange={setIsScheduleDialogOpen}
-        onScheduleTask={scheduleTask}
-      />
+          <EditTaskDialog
+            open={editDialogOpen}
+            onOpenChange={(open) => {
+              setEditDialogOpen(open);
+              if (!open) setSelectedTask(null);
+            }}
+            task={selectedTask}
+            onUpdateTask={handleUpdateTask}
+            loading={editLoading}
+          />
+        <CreateTaskDialog 
+          open={isCreateDialogOpen}
+          onOpenChange={setIsCreateDialogOpen}
+          onCreateTask={createTask}
+        />
+        <ScheduleTaskDialog 
+          open={isScheduleDialogOpen}
+          onOpenChange={setIsScheduleDialogOpen}
+          onScheduleTask={scheduleTask}
+        />
+        </div>
+      )}
     </div>
   );
 }

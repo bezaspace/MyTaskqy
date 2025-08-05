@@ -1,3 +1,4 @@
+import { parseIST } from '@/lib/ist-time-utils';
 import { NextRequest, NextResponse } from 'next/server';
 import { initDatabase, getAllTasks, createTask, updateTask, deleteTask, startTask, completeTask, addTaskLog, updateTaskLog, deleteTaskLog } from '@/lib/database';
 
@@ -62,7 +63,26 @@ export async function POST(request: NextRequest) {
 
     // Create new task (default POST behavior)
     const body = await request.json();
-    const { title, description, scheduledStartTime, scheduledEndTime } = body;
+
+    let { title, description, scheduledStartTime, scheduledEndTime } = body;
+
+    // Parse and convert to IST ISO string if not already ISO
+    if (scheduledStartTime && isNaN(Date.parse(scheduledStartTime))) {
+      try {
+        const parsed = parseIST(scheduledStartTime);
+        scheduledStartTime = parsed.toISOString();
+      } catch (e) {
+        scheduledStartTime = undefined;
+      }
+    }
+    if (scheduledEndTime && isNaN(Date.parse(scheduledEndTime))) {
+      try {
+        const parsed = parseIST(scheduledEndTime);
+        scheduledEndTime = parsed.toISOString();
+      } catch (e) {
+        scheduledEndTime = undefined;
+      }
+    }
 
     if (!title) {
       return NextResponse.json(

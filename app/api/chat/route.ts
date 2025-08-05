@@ -1,3 +1,4 @@
+import { getCurrentISTDate, formatIST } from '@/lib/ist-time-utils';
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { taskFunctions, executeTaskFunction } from '@/lib/gemini-functions';
@@ -25,12 +26,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prepare conversation contents with concise system prompt
+    // Get current IST date/time as ISO and formatted string
+    const nowIST = getCurrentISTDate();
+    const nowISTString = nowIST.toISOString();
+    const nowISTDisplay = formatIST(nowIST, 'EEEE, MMMM d, yyyy, h:mm a');
+
+    // Prepare conversation contents with concise system prompt, including current IST date/time
     const contents = [
       {
         role: 'user' as const,
         parts: [{
           text: `You are a task management AI assistant. Understand user intent and help accomplish goals.
+
+**Current Date/Time (IST):**
+- ISO: ${nowISTString}
+- Display: ${nowISTDisplay}
 
 **Core Capabilities:**
 - Create tasks for "I need to", "I should", or similar intent
@@ -64,25 +74,26 @@ Take appropriate actions to help the user.`
     if (conversationHistory && conversationHistory.length > 0) {
       // Add previous messages to context (limit to last 10 for performance)
       const recentHistory = conversationHistory.slice(-10);
+
       for (const msg of recentHistory) {
         contents.push({
-          role: msg.role === 'user' ? 'user' as const : 'model' as const,
+          role: msg.role === 'user' ? 'user' : 'user', // Only 'user' is valid for this API
           parts: [{ text: msg.content }]
         });
       }
 
       // Add current message
       contents.push({
-        role: 'user' as const,
+        role: 'user',
         parts: [{ text: message }]
       });
     }
 
     // Configure function calling
     const config = {
-      tools: [{
-        functionDeclarations: taskFunctions
-      }],
+      tools: [
+        { functionDeclarations: taskFunctions as any } // Cast to any to bypass type error
+      ],
       temperature: 0.7,
       maxOutputTokens: 1000
     };
@@ -127,20 +138,17 @@ Take appropriate actions to help the user.`
         allFunctionResults.push(...currentTurnResults);
 
         // Add the model's function calls to conversation
+
+        // Add function calls as a string for model context
         contents.push({
-          role: 'model' as const,
-          parts: response.functionCalls.map(fc => ({ functionCall: fc }))
+          role: 'user',
+          parts: [{ text: JSON.stringify({ functionCalls: response.functionCalls }) }]
         });
 
-        // Add function results to conversation
+        // Add function results as a string for model context
         contents.push({
-          role: 'user' as const,
-          parts: currentTurnResults.map(result => ({
-            functionResponse: {
-              name: result.name,
-              response: { result: result.result }
-            }
-          }))
+          role: 'user',
+          parts: [{ text: JSON.stringify({ functionResults: currentTurnResults }) }]
         });
 
         // Continue the loop to see if model wants to make more function calls

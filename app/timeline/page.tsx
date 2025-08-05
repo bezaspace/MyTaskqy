@@ -1,12 +1,15 @@
+
 "use client";
+import { getCurrentISTDate, formatIST, toIST } from '@/lib/ist-time-utils';
 
 import { useState, useEffect, useRef } from 'react';
-import { Clock, ArrowLeft, Calendar, Target } from 'lucide-react';
+import { Clock, ArrowLeft, Calendar, Target, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Task } from '@/app/page';
+import { EditTaskDialog } from '@/components/EditTaskDialog';
 import { DateSelector } from '@/components/DateSelector';
 import { TimelineSlot } from '@/components/TimelineSlot';
 import { TaskBlock } from '@/components/TaskBlock';
@@ -28,13 +31,13 @@ async function fetchTasks(): Promise<Task[]> {
   // Convert string dates back to Date objects
   return result.data.map((task: any) => ({
     ...task,
-    startTime: new Date(task.startTime),
-    scheduledStartTime: task.scheduledStartTime ? new Date(task.scheduledStartTime) : undefined,
-    scheduledEndTime: task.scheduledEndTime ? new Date(task.scheduledEndTime) : undefined,
-    completedTime: task.completedTime ? new Date(task.completedTime) : undefined,
+    startTime: toIST(task.startTime),
+    scheduledStartTime: task.scheduledStartTime ? toIST(task.scheduledStartTime) : undefined,
+    scheduledEndTime: task.scheduledEndTime ? toIST(task.scheduledEndTime) : undefined,
+    completedTime: task.completedTime ? toIST(task.completedTime) : undefined,
     logs: task.logs.map((log: any) => ({
       ...log,
-      timestamp: new Date(log.timestamp),
+      timestamp: toIST(log.timestamp),
       isEditable: Boolean(log.isEditable)
     }))
   }));
@@ -45,7 +48,9 @@ export default function TimelinePage() {
   const [selectedDate, setSelectedDate] = useState<Date>(getNavigationDates().today);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [currentTime, setCurrentTime] = useState(getCurrentISTDate());
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const timeSlots = generateTimeSlots();
@@ -59,12 +64,10 @@ export default function TimelinePage() {
   // Real-time updates for current time and in-progress tasks
   useEffect(() => {
     const interval = setInterval(() => {
-      const now = new Date();
+      const now = getCurrentISTDate();
       setCurrentTime(now);
-      
-      const isViewingToday = selectedDate.toDateString() === now.toDateString();
+      const isViewingToday = toIST(selectedDate).toDateString() === now.toDateString();
       const hasInProgressTasks = tasks.some(task => task.status === 'in-progress');
-      
       if (isViewingToday && hasInProgressTasks) {
         // Force re-render to update in-progress task sizes
         setTasks(prevTasks => [...prevTasks]);
@@ -88,6 +91,28 @@ export default function TimelinePage() {
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
+  };
+
+  const handleUpdateTask = async (updates: Partial<Task>) => {
+    if (!updates.id) return;
+    setEditLoading(true);
+    try {
+      const response = await fetch(`/api/tasks?id=${updates.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
+      await loadTasks();
+      setSelectedTask(null);
+    } catch (error) {
+      alert('Failed to update task.');
+      console.error(error);
+    } finally {
+      setEditLoading(false);
+      setEditDialogOpen(false);
+    }
   };
 
   const scrollToCurrentTime = () => {
@@ -114,6 +139,16 @@ export default function TimelinePage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
+      <EditTaskDialog
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) setSelectedTask(null);
+        }}
+        task={selectedTask}
+        onUpdateTask={handleUpdateTask}
+        loading={editLoading}
+      />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -160,7 +195,7 @@ export default function TimelinePage() {
                     <Calendar className="w-5 h-5 mr-2" />
                     Daily Timeline
                   </CardTitle>
-                  {selectedDate.toDateString() === currentTime.toDateString() && (
+                  {toIST(selectedDate).toDateString() === currentTime.toDateString() && (
                     <Button
                       onClick={scrollToCurrentTime}
                       size="sm"
@@ -186,7 +221,7 @@ export default function TimelinePage() {
                     ))}
                     
                     {/* Current time indicator (only for today) */}
-                    {selectedDate.toDateString() === currentTime.toDateString() && (
+                    {toIST(selectedDate).toDateString() === currentTime.toDateString() && (
                       <div
                         className="absolute left-16 right-6 z-10"
                         style={{
@@ -197,11 +232,7 @@ export default function TimelinePage() {
                           <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                           <div className="flex-1 h-0.5 bg-red-500"></div>
                           <div className="text-xs text-red-500 ml-2 bg-black px-1 rounded">
-                            {currentTime.toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true
-                            })}
+                            {formatIST(currentTime, 'h:mm a')}
                           </div>
                         </div>
                       </div>
@@ -245,11 +276,20 @@ export default function TimelinePage() {
               <CardContent>
                 {selectedTask ? (
                   <div className="space-y-4">
-                    <div>
-                      <h3 className="font-semibold text-white mb-2">{selectedTask.title}</h3>
-                      <p className="text-sm text-gray-400">{selectedTask.description}</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h3 className="font-semibold text-white">{selectedTask.title}</h3>
+                        <p className="text-sm text-gray-400">{selectedTask.description}</p>
+                      </div>
+                      <button
+                        className="ml-2 p-2 rounded hover:bg-zinc-800 border border-zinc-700 text-yellow-400 flex items-center"
+                        title="Edit Task"
+                        onClick={() => setEditDialogOpen(true)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                        <span className="ml-1 text-xs font-semibold hidden sm:inline">Edit</span>
+                      </button>
                     </div>
-                    
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-400">Status:</span>
@@ -261,20 +301,14 @@ export default function TimelinePage() {
                           {selectedTask.status.replace('-', ' ')}
                         </span>
                       </div>
-                      
                       {selectedTask.scheduledStartTime && (
                         <div className="flex justify-between">
                           <span className="text-gray-400">Scheduled:</span>
                           <span className="text-white">
-                            {selectedTask.scheduledStartTime.toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true
-                            })}
+                            {formatIST(selectedTask.scheduledStartTime, 'h:mm a')}
                           </span>
                         </div>
                       )}
-                      
                       {selectedTask.logs.length > 0 && (
                         <div>
                           <span className="text-gray-400">Recent Activity:</span>
@@ -283,11 +317,7 @@ export default function TimelinePage() {
                               <div key={log.id} className="text-xs p-2 bg-zinc-800 rounded">
                                 <p className="text-gray-300">{log.message}</p>
                                 <p className="text-gray-500 mt-1">
-                                  {log.timestamp.toLocaleTimeString('en-US', {
-                                    hour: 'numeric',
-                                    minute: '2-digit',
-                                    hour12: true
-                                  })}
+                                  {formatIST(log.timestamp, 'h:mm a')}
                                 </p>
                               </div>
                             ))}

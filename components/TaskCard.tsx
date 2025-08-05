@@ -18,9 +18,10 @@ interface TaskCardProps {
   onUpdateLog: (taskId: string, logId: string, message: string) => void;
   onDeleteLog: (taskId: string, logId: string) => void;
   onDelete: (taskId: string) => void;
+  onEdit?: (task: Task) => void;
 }
 
-export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onDeleteLog, onDelete }: TaskCardProps) {
+export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onDeleteLog, onDelete, onEdit }: TaskCardProps) {
   const [newLogMessage, setNewLogMessage] = useState('');
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [editingLogMessage, setEditingLogMessage] = useState('');
@@ -132,6 +133,17 @@ export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onD
           </div>
           <div className="flex items-center gap-2">
             {getStatusBadge()}
+            {onEdit && (
+              <Button
+                onClick={() => onEdit(task)}
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0 text-yellow-400 hover:text-yellow-300 hover:bg-yellow-900/20"
+                title="Edit Task"
+              >
+                <Edit2 className="w-4 h-4" />
+              </Button>
+            )}
             <Button
               onClick={() => onDelete(task.id)}
               size="sm"
@@ -146,11 +158,13 @@ export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onD
 
       <CardContent className="space-y-4">
         {/* Scheduled Time Info */}
-        {task.status === 'scheduled' && task.scheduledStartTime && task.scheduledEndTime && (
+        {task.status === 'scheduled' && (task.scheduledStartTime || task.scheduledEndTime) && (
           <div className="space-y-2 text-sm">
             <div className="flex items-center text-blue-400">
               <Calendar className="w-4 h-4 mr-1" />
-              Scheduled: {formatDateTime(task.scheduledStartTime)} - {formatDateTime(task.scheduledEndTime)}
+              Scheduled: {task.scheduledStartTime ? formatDateTime(task.scheduledStartTime) : ''}
+              {task.scheduledStartTime && task.scheduledEndTime ? ' - ' : ''}
+              {task.scheduledEndTime ? formatDateTime(task.scheduledEndTime) : ''}
             </div>
           </div>
         )}
