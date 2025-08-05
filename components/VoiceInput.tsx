@@ -79,7 +79,7 @@ export function VoiceInput({ onTranscription, disabled }: VoiceInputProps) {
     <div className="flex items-center gap-2">
       {/* Recording duration display */}
       {isRecording && (
-        <div className="text-xs text-yellow-400 font-mono">
+        <div className="text-xs text-yellow-400 font-mono hidden sm:block">
           {formatDuration(duration)}
         </div>
       )}
@@ -89,7 +89,7 @@ export function VoiceInput({ onTranscription, disabled }: VoiceInputProps) {
         type="button"
         size="sm"
         variant={isRecording ? "destructive" : "ghost"}
-        className={`p-2 h-9 w-9 ${
+        className={`p-2 h-9 w-9 flex-shrink-0 ${
           isRecording 
             ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
             : 'hover:bg-zinc-700'
@@ -99,17 +99,17 @@ export function VoiceInput({ onTranscription, disabled }: VoiceInputProps) {
         title={isRecording ? 'Stop recording' : 'Start voice recording'}
       >
         {isLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
         ) : isRecording ? (
-          <MicOff className="w-4 h-4" />
+          <MicOff className="w-3 h-3 md:w-4 md:h-4" />
         ) : (
-          <Mic className="w-4 h-4" />
+          <Mic className="w-3 h-3 md:w-4 md:h-4" />
         )}
       </Button>
 
       {/* Error display */}
       {hasError && (
-        <div className="text-xs text-red-400 max-w-32 truncate" title={error || 'Recording error'}>
+        <div className="text-xs text-red-400 max-w-20 md:max-w-32 truncate" title={error || 'Recording error'}>
           {error || 'Recording error'}
         </div>
       )}

@@ -63,7 +63,7 @@ export function ScheduleTaskDialog({ open, onOpenChange, onScheduleTask }: Sched
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md">
+      <DialogContent className="bg-zinc-900 border-zinc-800 text-white w-[95vw] max-w-md mx-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-blue-400">
             Schedule New Task
@@ -156,18 +156,18 @@ export function ScheduleTaskDialog({ open, onOpenChange, onScheduleTask }: Sched
             </div>
           </div>
           
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Button 
               type="button" 
               variant="outline" 
               onClick={() => onOpenChange(false)}
-              className="flex-1 border-zinc-700 text-gray-300 hover:bg-zinc-800"
+              className="flex-1 border-zinc-700 text-gray-300 hover:bg-zinc-800 h-11"
             >
               Cancel
             </Button>
             <Button 
               type="submit"
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold h-11"
             >
               Schedule Task
             </Button>

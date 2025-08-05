@@ -73,3 +73,59 @@
   background-color: #4a5568;
   border-radius: 3px;
 }
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  /* Ensure touch targets are at least 44px */
+  button {
+    min-height: 44px;
+  }
+  
+  /* Better mobile scrolling */
+  .scroll-area {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent zoom on input focus */
+  input, textarea, select {
+    font-size: 16px;
+  }
+  
+  /* Better mobile dialog positioning */
+  [data-radix-dialog-content] {
+    max-height: 90vh;
+    margin: 5vh auto;
+  }
+}
+
+/* Touch-friendly hover states */
+@media (hover: none) {
+  .hover\:bg-zinc-800:hover {
+    background-color: transparent;
+  }
+  
+  .hover\:border-zinc-700:hover {
+    border-color: inherit;
+  }
+}
+
+/* Improved mobile typography */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Screen reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

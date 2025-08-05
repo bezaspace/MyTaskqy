@@ -30,7 +30,7 @@ export function CreateTaskDialog({ open, onOpenChange, onCreateTask }: CreateTas
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-white">
+      <DialogContent className="bg-zinc-900 border-zinc-800 text-white w-[95vw] max-w-md mx-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-yellow-400">
             Create New Task
@@ -65,18 +65,18 @@ export function CreateTaskDialog({ open, onOpenChange, onCreateTask }: CreateTas
             />
           </div>
           
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Button 
               type="button" 
               variant="outline" 
               onClick={() => onOpenChange(false)}
-              className="flex-1 border-zinc-700 text-gray-300 hover:bg-zinc-800"
+              className="flex-1 border-zinc-700 text-gray-300 hover:bg-zinc-800 h-11"
             >
               Cancel
             </Button>
             <Button 
               type="submit"
-              className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold"
+              className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold h-11"
             >
               Create Task
             </Button>

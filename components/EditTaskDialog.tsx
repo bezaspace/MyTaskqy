@@ -63,7 +63,7 @@ export function EditTaskDialog({ open, onOpenChange, task, onUpdateTask, loading
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md">
+      <DialogContent className="bg-zinc-900 border-zinc-800 text-white w-[95vw] max-w-md mx-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-yellow-400">
             Edit Task
@@ -151,19 +151,19 @@ export function EditTaskDialog({ open, onOpenChange, task, onUpdateTask, loading
               />
             </div>
           </div>
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1 border-zinc-700 text-gray-300 hover:bg-zinc-800"
+              className="flex-1 border-zinc-700 text-gray-300 hover:bg-zinc-800 h-11"
               disabled={loading}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold"
+              className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold h-11"
               disabled={loading}
             >
               {loading ? 'Updating...' : 'Update Task'}

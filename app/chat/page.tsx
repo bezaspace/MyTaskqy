@@ -119,23 +119,21 @@ export default function ChatPage() {
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Header */}
       <div className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/">
-                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Tasks
-                </Button>
-              </Link>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center">
-                  <MessageSquare className="w-5 h-5 text-black" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-white">AI Task Assistant</h1>
-                  <p className="text-sm text-gray-400">Manage your tasks with natural language</p>
-                </div>
+        <div className="container mx-auto px-4 py-3 md:py-4">
+          <div className="flex items-center gap-3 md:gap-4">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white p-2 md:px-3">
+                <ArrowLeft className="w-4 h-4 md:mr-2" />
+                <span className="hidden md:inline">Back to Tasks</span>
+              </Button>
+            </Link>
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-yellow-400 rounded-full flex items-center justify-center">
+                <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-black" />
+              </div>
+              <div>
+                <h1 className="text-lg md:text-xl font-bold text-white">AI Assistant</h1>
+                <p className="text-xs md:text-sm text-gray-400 hidden sm:block">Manage your tasks with natural language</p>
               </div>
             </div>
           </div>
@@ -144,8 +142,8 @@ export default function ChatPage() {
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-hidden">
-        <div className="container mx-auto px-4 py-6 h-full flex flex-col">
-          <div className="flex-1 overflow-y-auto mb-4">
+        <div className="container mx-auto px-4 py-4 md:py-6 h-full flex flex-col">
+          <div className="flex-1 overflow-y-auto mb-3 md:mb-4">
             <div className="max-w-4xl mx-auto">
               {messages.map((message) => (
                 <ChatMessage key={message.id} message={message} />
@@ -172,15 +170,15 @@ export default function ChatPage() {
           </div>
 
           {/* Input Area */}
-          <div className="border-t border-zinc-800 pt-4">
+          <div className="border-t border-zinc-800 pt-3 md:pt-4">
             <div className="max-w-4xl mx-auto">
-              <div className="flex gap-3">
+              <div className="flex gap-2 md:gap-3">
                 <Input
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Ask me to create, manage, or track your tasks..."
-                  className="flex-1 bg-zinc-900 border-zinc-700 text-white placeholder-gray-400 focus:border-yellow-400"
+                  className="flex-1 bg-zinc-900 border-zinc-700 text-white placeholder-gray-400 focus:border-yellow-400 text-sm md:text-base"
                   disabled={isLoading}
                 />
                 <VoiceInput 
@@ -190,18 +188,19 @@ export default function ChatPage() {
                 <Button
                   onClick={() => sendMessage()}
                   disabled={!inputMessage.trim() || isLoading}
-                  className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-6"
+                  className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-4 md:px-6"
                 >
                   {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
                   ) : (
-                    <Send className="w-4 h-4" />
+                    <Send className="w-3 h-3 md:w-4 md:h-4" />
                   )}
                 </Button>
               </div>
               
-              <div className="mt-2 text-xs text-gray-500 text-center">
-                Try: "Create a task to review code" • "Show my active tasks" • "Complete task #123"
+              <div className="mt-2 text-xs text-gray-500 text-center px-2">
+                <span className="hidden md:inline">Try: "Create a task to review code" • "Show my active tasks" • "Complete task #123"</span>
+                <span className="md:hidden">Try: "Create a task" • "Show active tasks"</span>
               </div>
             </div>
           </div>

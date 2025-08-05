@@ -122,42 +122,46 @@ export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onD
 
   return (
     <Card className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg font-semibold text-white mb-2">
+      <CardHeader className="pb-3 p-4 md:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-base md:text-lg font-semibold text-white mb-2">
               {task.title}
             </CardTitle>
             <p className="text-sm text-gray-400 line-clamp-2">
               {task.description}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {getStatusBadge()}
-            {onEdit && (
+          <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+            <div className="mb-2 md:mb-0">
+              {getStatusBadge()}
+            </div>
+            <div className="flex gap-1">
+              {onEdit && (
+                <Button
+                  onClick={() => onEdit(task)}
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0 text-yellow-400 hover:text-yellow-300 hover:bg-yellow-900/20"
+                  title="Edit Task"
+                >
+                  <Edit2 className="w-3 h-3 md:w-4 md:h-4" />
+                </Button>
+              )}
               <Button
-                onClick={() => onEdit(task)}
+                onClick={() => onDelete(task.id)}
                 size="sm"
                 variant="ghost"
-                className="h-8 w-8 p-0 text-yellow-400 hover:text-yellow-300 hover:bg-yellow-900/20"
-                title="Edit Task"
+                className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-900/20"
               >
-                <Edit2 className="w-4 h-4" />
+                <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
               </Button>
-            )}
-            <Button
-              onClick={() => onDelete(task.id)}
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-900/20"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            </div>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 md:space-y-4 p-4 md:p-6 pt-0">
         {/* Scheduled Time Info */}
         {task.status === 'scheduled' && (task.scheduledStartTime || task.scheduledEndTime) && (
           <div className="space-y-2 text-sm">
@@ -172,13 +176,13 @@ export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onD
 
         {/* Time Info for In-Progress and Completed */}
         {task.status !== 'scheduled' && (
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs md:text-sm">
             <div className="flex items-center text-gray-400">
-              <Calendar className="w-4 h-4 mr-1" />
+              <Calendar className="w-3 h-3 md:w-4 md:h-4 mr-1" />
               Started: {formatDateTime(task.startTime)}
             </div>
             <div className="flex items-center">
-              <Timer className="w-4 h-4 mr-1" />
+              <Timer className="w-3 h-3 md:w-4 md:h-4 mr-1" />
               <span className={task.status === 'in-progress' ? 'text-yellow-400 font-mono' : 'text-green-400 font-mono'}>
                 {formatTime(totalTime)}
               </span>
@@ -204,12 +208,12 @@ export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onD
             </span>
           </div>
           
-          <ScrollArea className="h-32 w-full">
+          <ScrollArea className="h-24 md:h-32 w-full">
             <div className="space-y-2">
               {task.logs.map((log) => (
                 <div key={log.id} className="text-xs p-2 bg-zinc-800 rounded border-l-2 border-yellow-400">
-                  <p className="text-gray-300 mb-1">{log.message}</p>
-                  <p className="text-gray-500">{formatDateTime(log.timestamp)}</p>
+                  <p className="text-gray-300 mb-1 text-xs md:text-sm">{log.message}</p>
+                  <p className="text-gray-500 text-xs">{formatDateTime(log.timestamp)}</p>
                 </div>
               ))}
             </div>
@@ -224,12 +228,12 @@ export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onD
               value={newLogMessage}
               onChange={(e) => setNewLogMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500"
+              className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500 text-sm"
             />
             <Button 
               onClick={handleAddLog}
               size="sm"
-              className="bg-yellow-400 hover:bg-yellow-500 text-black"
+              className="bg-yellow-400 hover:bg-yellow-500 text-black px-3 md:px-4 text-xs md:text-sm"
             >
               Add
             </Button>

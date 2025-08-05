@@ -13,6 +13,7 @@ import { TaskCard } from '@/components/TaskCard';
 import { EditTaskDialog } from '@/components/EditTaskDialog';
 import { CreateTaskDialog } from '@/components/CreateTaskDialog';
 import { ScheduleTaskDialog } from '@/components/ScheduleTaskDialog';
+import { MobileNavigation } from '@/components/MobileNavigation';
 
 export interface Task {
   id: string;
@@ -289,11 +290,15 @@ export default function Home() {
           </div>
         </div>
       ) : (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-yellow-400">TaskMaster</h1>
-          <div className="flex gap-3 items-center">
+        <div className="flex items-center justify-between mb-6 md:mb-8">
+          <div className="flex-1">
+            <h1 className="text-2xl md:text-4xl font-bold text-yellow-400">TaskMaster</h1>
+          </div>
+          
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex gap-3 items-center">
             <Link href="/timeline">
               <Button 
                 variant="outline"
@@ -337,54 +342,62 @@ export default function Home() {
               </Button>
             )}
           </div>
+
+          {/* Mobile Navigation */}
+          <MobileNavigation
+            onCreateTask={() => setIsCreateDialogOpen(true)}
+            onScheduleTask={() => setIsScheduleDialogOpen(true)}
+            onSignOut={() => signOut({ callbackUrl: '/auth/signin' })}
+            showSignOut={!!session?.user}
+          />
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <Card className="bg-zinc-900 border-zinc-800">
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Scheduled</p>
-                  <p className="text-2xl font-bold text-blue-400">{scheduledTasks.length}</p>
+                  <p className="text-xs md:text-sm text-gray-400">Scheduled</p>
+                  <p className="text-xl md:text-2xl font-bold text-blue-400">{scheduledTasks.length}</p>
                 </div>
-                <Clock className="w-8 h-8 text-blue-400" />
+                <Clock className="w-6 h-6 md:w-8 md:h-8 text-blue-400" />
               </div>
             </CardContent>
           </Card>
           
           <Card className="bg-zinc-900 border-zinc-800">
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Active Tasks</p>
-                  <p className="text-2xl font-bold text-yellow-400">{inProgressTasks.length}</p>
+                  <p className="text-xs md:text-sm text-gray-400">Active Tasks</p>
+                  <p className="text-xl md:text-2xl font-bold text-yellow-400">{inProgressTasks.length}</p>
                 </div>
-                <Play className="w-8 h-8 text-yellow-400" />
+                <Play className="w-6 h-6 md:w-8 md:h-8 text-yellow-400" />
               </div>
             </CardContent>
           </Card>
           
           <Card className="bg-zinc-900 border-zinc-800">
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Completed</p>
-                  <p className="text-2xl font-bold text-green-400">{completedTasks.length}</p>
+                  <p className="text-xs md:text-sm text-gray-400">Completed</p>
+                  <p className="text-xl md:text-2xl font-bold text-green-400">{completedTasks.length}</p>
                 </div>
-                <CheckCircle className="w-8 h-8 text-green-400" />
+                <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-green-400" />
               </div>
             </CardContent>
           </Card>
           
           <Card className="bg-zinc-900 border-zinc-800">
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Total Tasks</p>
-                  <p className="text-2xl font-bold text-white">{tasks.length}</p>
+                  <p className="text-xs md:text-sm text-gray-400">Total Tasks</p>
+                  <p className="text-xl md:text-2xl font-bold text-white">{tasks.length}</p>
                 </div>
-                <Square className="w-8 h-8 text-white" />
+                <Square className="w-6 h-6 md:w-8 md:h-8 text-white" />
               </div>
             </CardContent>
           </Card>
@@ -392,12 +405,12 @@ export default function Home() {
 
         {/* Scheduled Tasks */}
         {scheduledTasks.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-blue-400 mb-4 flex items-center">
-              <Clock className="w-6 h-6 mr-2" />
+          <div className="mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-semibold text-blue-400 mb-3 md:mb-4 flex items-center">
+              <Clock className="w-5 h-5 md:w-6 md:h-6 mr-2" />
               Scheduled Tasks ({scheduledTasks.length})
             </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {scheduledTasks.map(task => (
                 <TaskCard 
                   key={task.id} 
@@ -417,12 +430,12 @@ export default function Home() {
 
         {/* In Progress Tasks */}
         {inProgressTasks.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-yellow-400 mb-4 flex items-center">
-              <Clock className="w-6 h-6 mr-2" />
+          <div className="mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-semibold text-yellow-400 mb-3 md:mb-4 flex items-center">
+              <Clock className="w-5 h-5 md:w-6 md:h-6 mr-2" />
               Active Tasks ({inProgressTasks.length})
             </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {inProgressTasks.map(task => (
                 <TaskCard 
                   key={task.id} 
@@ -443,11 +456,11 @@ export default function Home() {
         {/* Completed Tasks */}
         {completedTasks.length > 0 && (
           <div>
-            <h2 className="text-2xl font-semibold text-green-400 mb-4 flex items-center">
-              <CheckCircle className="w-6 h-6 mr-2" />
+            <h2 className="text-xl md:text-2xl font-semibold text-green-400 mb-3 md:mb-4 flex items-center">
+              <CheckCircle className="w-5 h-5 md:w-6 md:h-6 mr-2" />
               Completed Tasks ({completedTasks.length})
             </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {completedTasks.map(task => (
                 <TaskCard 
                   key={task.id} 
@@ -471,18 +484,18 @@ export default function Home() {
             <Clock className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-400 mb-2">No tasks yet</h3>
             <p className="text-gray-500 mb-6">Create your first task to start tracking your productivity</p>
-            <div className="flex gap-3 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
               <Button 
                 onClick={() => setIsScheduleDialogOpen(true)}
                 variant="outline"
-                className="border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-black font-semibold"
+                className="border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-black font-semibold h-11"
               >
                 <Clock className="w-4 h-4 mr-2" />
                 Schedule Task
               </Button>
               <Button 
                 onClick={() => setIsCreateDialogOpen(true)}
-                className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold"
+                className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold h-11"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Start Task Now

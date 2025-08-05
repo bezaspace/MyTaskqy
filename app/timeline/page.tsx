@@ -149,10 +149,10 @@ export default function TimelinePage() {
         onUpdateTask={handleUpdateTask}
         loading={editLoading}
       />
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
+          <div className="flex items-center gap-3 md:gap-4">
             <Link href="/">
               <Button 
                 variant="outline"
@@ -160,16 +160,16 @@ export default function TimelinePage() {
                 className="border-zinc-700 text-gray-300 hover:bg-zinc-800"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Tasks
+                Back
               </Button>
             </Link>
             <div>
-              <h1 className="text-4xl font-bold text-white mb-2">Timeline View</h1>
-              <p className="text-gray-400">24-hour daily schedule with 30-minute intervals</p>
+              <h1 className="text-2xl md:text-4xl font-bold text-white mb-1 md:mb-2">Timeline View</h1>
+              <p className="text-sm md:text-base text-gray-400">24-hour daily schedule</p>
             </div>
           </div>
-          <div className="text-right">
-            <h2 className="text-2xl font-semibold text-yellow-400">
+          <div className="text-left md:text-right">
+            <h2 className="text-xl md:text-2xl font-semibold text-yellow-400">
               {formatDateDisplay(selectedDate)}
             </h2>
             <p className="text-sm text-gray-400">
@@ -185,9 +185,9 @@ export default function TimelinePage() {
         />
 
         {/* Timeline */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
           {/* Timeline Column */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 order-2 lg:order-1">
             <Card className="bg-zinc-900 border-zinc-800">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -209,7 +209,7 @@ export default function TimelinePage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <ScrollArea className="h-[700px]" ref={scrollAreaRef}>
+                <ScrollArea className="h-[500px] md:h-[700px]" ref={scrollAreaRef}>
                   <div className="relative px-6 pb-4">
                     {/* Time slots */}
                     {timeSlots.map((slot, index) => (
@@ -266,8 +266,8 @@ export default function TimelinePage() {
           </div>
 
           {/* Task Details Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="bg-zinc-900 border-zinc-800 sticky top-8">
+          <div className="lg:col-span-1 order-1 lg:order-2">
+            <Card className="bg-zinc-900 border-zinc-800 lg:sticky lg:top-8">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold text-white">
                   {selectedTask ? 'Task Details' : 'Select a Task'}
@@ -286,8 +286,8 @@ export default function TimelinePage() {
                         title="Edit Task"
                         onClick={() => setEditDialogOpen(true)}
                       >
-                        <Pencil className="w-4 h-4" />
-                        <span className="ml-1 text-xs font-semibold hidden sm:inline">Edit</span>
+                        <Pencil className="w-3 h-3 md:w-4 md:h-4" />
+                        <span className="ml-1 text-xs font-semibold hidden md:inline">Edit</span>
                       </button>
                     </div>
                     <div className="space-y-2 text-sm">
@@ -339,14 +339,14 @@ export default function TimelinePage() {
 
         {/* Empty State */}
         {taskPositions.length === 0 && (
-          <div className="text-center py-12 mt-8">
-            <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-400 mb-2">No tasks for this date</h3>
-            <p className="text-gray-500 mb-6">
+          <div className="text-center py-8 md:py-12 mt-6 md:mt-8">
+            <Calendar className="w-12 h-12 md:w-16 md:h-16 text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg md:text-xl font-semibold text-gray-400 mb-2">No tasks for this date</h3>
+            <p className="text-sm md:text-base text-gray-500 mb-6 px-4">
               {formatDateDisplay(selectedDate)} has no scheduled or completed tasks
             </p>
             <Link href="/">
-              <Button className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold">
+              <Button className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold h-11">
                 Create New Task
               </Button>
             </Link>
