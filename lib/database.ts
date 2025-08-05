@@ -73,6 +73,13 @@ export interface TaskWithLogs extends Task {
   logs: TaskLog[];
 }
 
+export interface Note {
+  id: string;
+  title: string;
+  description: string;
+  created_at: string;
+}
+
 class TaskDatabase {
   constructor() {
     // No initialization needed for Supabase
@@ -256,6 +263,83 @@ class TaskDatabase {
     });
   }
 
+  // Note operations
+  async createNote(note: Note): Promise<Note> {
+    const { error } = await supabase
+      .from('notes')
+      .insert(note);
+
+    if (error) {
+      throw error;
+    }
+
+    return note;
+  }
+
+  async getAllNotes(): Promise<Note[]> {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return data || [];
+  }
+
+  async getNoteById(id: string): Promise<Note | null> {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null; // No rows found
+      }
+      throw error;
+    }
+
+    return data;
+  }
+
+  async updateNote(id: string, updates: Partial<Note>): Promise<boolean> {
+    const filteredUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([_, value]) => value !== undefined)
+    );
+
+    if (Object.keys(filteredUpdates).length === 0) {
+      return false;
+    }
+
+    const { error } = await supabase
+      .from('notes')
+      .update(filteredUpdates)
+      .eq('id', id);
+
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  }
+
+  async deleteNote(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('notes')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  }
+
   async close() {
     // No cleanup needed for Supabase client
   }
@@ -408,6 +492,37 @@ export async function updateTaskLog(taskId: string, logId: string, message: stri
 
 export async function deleteTaskLog(taskId: string, logId: string): Promise<boolean> {
   return await getDatabase().deleteTaskLog(logId);
+}
+
+// Note functions
+export async function getAllNotes(): Promise<Note[]> {
+  return await getDatabase().getAllNotes();
+}
+
+export async function createNote(data: { title: string; description: string }): Promise<Note> {
+  const db = getDatabase();
+  const noteId = Date.now().toString();
+
+  const note: Note = {
+    id: noteId,
+    title: data.title,
+    description: data.description,
+    created_at: new Date().toISOString()
+  };
+
+  return await db.createNote(note);
+}
+
+export async function updateNote(noteId: string, updates: Partial<Note>): Promise<Note | null> {
+  const db = getDatabase();
+  const success = await db.updateNote(noteId, updates);
+  if (!success) return null;
+
+  return await db.getNoteById(noteId);
+}
+
+export async function deleteNote(noteId: string): Promise<boolean> {
+  return await getDatabase().deleteNote(noteId);
 }
 
 export default TaskDatabase;

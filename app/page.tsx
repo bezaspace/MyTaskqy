@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { Plus, Clock, Play, Square, CheckCircle, MessageSquare, Calendar } from 'lucide-react';
+import { Plus, Clock, Play, Square, CheckCircle, MessageSquare, Calendar, StickyNote } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -299,6 +299,15 @@ export default function Home() {
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex gap-3 items-center">
+            <Link href="/notes">
+              <Button 
+                variant="outline"
+                className="border-green-400 text-green-400 hover:bg-green-400 hover:text-black font-semibold"
+              >
+                <StickyNote className="w-4 h-4 mr-2" />
+                Notes
+              </Button>
+            </Link>
             <Link href="/timeline">
               <Button 
                 variant="outline"

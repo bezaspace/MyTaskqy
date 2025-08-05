@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Menu, X, Plus, Clock, Calendar, MessageSquare, LogOut } from 'lucide-react';
+import { Menu, X, Plus, Clock, Calendar, MessageSquare, LogOut, StickyNote } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -72,6 +72,16 @@ export function MobileNavigation({
             
             <div className="border-t border-zinc-700 pt-4">
               <h3 className="text-sm font-medium text-gray-400 mb-3">Navigation</h3>
+              
+              <Link href="/notes" onClick={closeMenu}>
+                <Button 
+                  variant="ghost"
+                  className="w-full text-green-400 hover:bg-green-400/10 justify-start"
+                >
+                  <StickyNote className="w-4 h-4 mr-3" />
+                  Notes
+                </Button>
+              </Link>
               
               <Link href="/timeline" onClick={closeMenu}>
                 <Button 

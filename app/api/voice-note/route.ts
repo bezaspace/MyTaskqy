@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-import { AudioProcessingRequest, AudioProcessingResponse } from '@/types/audio';
+import { AudioProcessingRequest } from '@/types/audio';
 
 // Initialize Gemini AI
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
+
+export interface VoiceNoteResponse {
+  success: boolean;
+  title?: string;
+  description?: string;
+  originalTranscription?: string;
+  error?: string;
+  details?: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,41 +24,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: 'Audio data is required'
-      } as AudioProcessingResponse, { status: 400 });
+      } as VoiceNoteResponse, { status: 400 });
     }
 
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({
         success: false,
         error: 'Gemini API key not configured'
-      } as AudioProcessingResponse, { status: 500 });
+      } as VoiceNoteResponse, { status: 500 });
     }
 
     // Validate MIME type
     const supportedTypes = ['audio/webm', 'audio/wav', 'audio/mp3', 'audio/mp4', 'audio/ogg'];
     const cleanMimeType = mimeType.split(';')[0]; // Remove codec info
-
+    
     if (!supportedTypes.includes(cleanMimeType)) {
       return NextResponse.json({
         success: false,
         error: `Unsupported audio format: ${cleanMimeType}`
-      } as AudioProcessingResponse, { status: 400 });
+      } as VoiceNoteResponse, { status: 400 });
     }
 
-    // Prepare content for Gemini
+    // Prepare content for Gemini - specialized for note creation
     const contents = [
       {
         role: 'user' as const,
         parts: [
           {
-            text: `Please transcribe this audio accurately. The user might be creating a note, task, or general content.
+            text: `Please transcribe this audio exactly as spoken and create an appropriate title for it as a note.
 
-If the user is expressing a specific intent (like creating a task, note, or asking about something), please also extract that intent.
+The user is creating a note, so please:
+1. Transcribe exactly what they said without any changes or corrections
+2. Generate a concise, descriptive title (3-8 words) that captures the main topic or theme
+3. The title should be clear and help identify the note later
 
-Respond in this format:
-TRANSCRIPTION: [exact words spoken]
-INTENT: [specific intent if any, or "none"]
-CONFIDENCE: [0-1 confidence score]`
+Respond in this exact format:
+TITLE: [generated title]
+TRANSCRIPTION: [exact words spoken, no changes]`
           },
           {
             inlineData: {
@@ -72,32 +83,41 @@ CONFIDENCE: [0-1 confidence score]`
     });
 
     const responseText = response.text || '';
-
+    
     // Parse the structured response
-    const transcriptionMatch = responseText.match(/TRANSCRIPTION:\s*(.+?)(?=\nINTENT:|$)/s);
-    const intentMatch = responseText.match(/INTENT:\s*(.+?)(?=\nCONFIDENCE:|$)/s);
-    const confidenceMatch = responseText.match(/CONFIDENCE:\s*([0-9.]+)/);
+    const titleMatch = responseText.match(/TITLE:\s*(.+?)(?=\nTRANSCRIPTION:|$)/s);
+    const transcriptionMatch = responseText.match(/TRANSCRIPTION:\s*(.+?)$/s);
 
+    const title = titleMatch?.[1]?.trim() || 'Voice Note';
     const transcription = transcriptionMatch?.[1]?.trim() || responseText;
-    const intent = intentMatch?.[1]?.trim() || 'none';
-    const confidence = confidenceMatch?.[1] ? parseFloat(confidenceMatch[1]) : 0.8;
+
+    // Fallback title generation if parsing failed
+    let finalTitle = title;
+    if (title === 'Voice Note' && transcription) {
+      // Generate a simple title from first few words
+      const words = transcription.split(' ').slice(0, 6);
+      finalTitle = words.join(' ');
+      if (finalTitle.length > 50) {
+        finalTitle = finalTitle.substring(0, 47) + '...';
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      transcription,
-      intent: intent !== 'none' ? intent : undefined,
-      confidence
-    } as AudioProcessingResponse);
+      title: finalTitle,
+      description: transcription,
+      originalTranscription: transcription
+    } as VoiceNoteResponse);
 
   } catch (error) {
-    console.error('Error in audio processing API:', error);
-
+    console.error('Error in voice note processing API:', error);
+    
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-
+    
     return NextResponse.json({
       success: false,
-      error: 'Failed to process audio',
+      error: 'Failed to process voice note',
       details: errorMessage
-    } as AudioProcessingResponse, { status: 500 });
+    } as VoiceNoteResponse, { status: 500 });
   }
 }
