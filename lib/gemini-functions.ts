@@ -107,9 +107,14 @@ export const taskFunctions = [
 
 // Helper function to execute task operations
 export async function executeTaskFunction(functionName: string, args: any) {
-  const baseUrl = process.env.NODE_ENV === 'production'
-    ? 'https://your-domain.com'
-    : 'http://localhost:3000';
+  let baseUrl = 'http://localhost:3000';
+  if (process.env.NODE_ENV === 'production') {
+    baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
+    if (!baseUrl) {
+      throw new Error('Production baseUrl is not set. Please set NEXT_PUBLIC_BASE_URL or VERCEL_URL.');
+    }
+  }
 
   switch (functionName) {
     case 'create_task':
