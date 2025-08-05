@@ -51,8 +51,8 @@ export function EditTaskDialog({ open, onOpenChange, task, onUpdateTask, loading
           id: task.id,
           title,
           description,
-          scheduledStartTime: scheduledStart.toISOString(),
-          scheduledEndTime: scheduledEnd.toISOString(),
+          scheduledStartTime: scheduledStart,
+          scheduledEndTime: scheduledEnd,
         });
         onOpenChange(false);
       } else {

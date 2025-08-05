@@ -31,7 +31,7 @@ class TaskDatabase {
     this.initializeDatabase();
   }
 
-  private async initializeDatabase() {
+  public async initializeDatabase() {
     try {
       this.connection = await initializeSQLiteDatabase();
       await migrateFromJSON(this.connection);
