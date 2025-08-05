@@ -82,7 +82,7 @@ async function scheduleTaskAPI(title: string, description: string, scheduledStar
 
 async function startTaskAPI(taskId: string): Promise<void> {
   const response = await fetch(`/api/tasks?action=start&id=${taskId}`, {
-    method: 'PUT'
+    method: 'POST'
   });
   const result = await response.json();
   if (!result.success) throw new Error(result.error);

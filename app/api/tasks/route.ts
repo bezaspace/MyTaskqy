@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       // Add log to task
       const body = await request.json();
       const { message } = body;
-      
+
       if (!message) {
         return NextResponse.json(
           { success: false, error: 'Message is required' },
@@ -115,6 +115,12 @@ export async function PUT(request: NextRequest) {
     const action = url.searchParams.get('action');
     const taskId = url.searchParams.get('id');
     const logId = url.searchParams.get('logId');
+
+    if (action === 'complete' && taskId) {
+      // Complete a task
+      const task = await completeTask(taskId);
+      return NextResponse.json({ success: true, data: task });
+    }
 
     if (action === 'updateLog' && taskId && logId) {
       // Update task log

@@ -63,11 +63,11 @@ CONFIDENCE: [0-1 confidence score]`
 
     // Call Gemini for audio processing
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash-lite',
       contents,
       config: {
         temperature: 0.1, // Low temperature for accurate transcription
-        maxOutputTokens: 1000
+        maxOutputTokens: 10000
       }
     });
 
