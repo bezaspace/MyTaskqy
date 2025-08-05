@@ -18,9 +18,10 @@ interface NoteCardProps {
   note: Note;
   onEdit: (note: Note) => void;
   onDelete: (noteId: string) => void;
+  onView: (note: Note) => void;
 }
 
-export function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
+export function NoteCard({ note, onEdit, onDelete, onView }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
@@ -43,7 +44,10 @@ export function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
   };
 
   return (
-    <Card className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors">
+    <Card 
+      className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer"
+      onClick={() => onView(note)}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <CardTitle className="text-lg font-semibold text-white line-clamp-2">
@@ -53,7 +57,10 @@ export function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onEdit(note)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(note);
+              }}
               className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 p-2"
             >
               <Edit className="w-4 h-4" />
@@ -61,7 +68,10 @@ export function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleDelete}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete();
+              }}
               disabled={isDeleting}
               className="text-red-400 hover:text-red-300 hover:bg-red-400/10 p-2"
             >

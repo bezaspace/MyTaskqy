@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { NoteCard, Note } from '@/components/NoteCard';
 import { CreateNoteDialog } from '@/components/CreateNoteDialog';
+import { NoteViewModal } from '@/components/NoteViewModal';
 import { VoiceInput } from '@/components/VoiceInput';
 import { VoiceNoteInput, VoiceNoteResult } from '@/components/VoiceNoteInput';
 
@@ -54,6 +55,8 @@ export default function NotesPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editNote, setEditNote] = useState<Note | null>(null);
   const [voiceNoteData, setVoiceNoteData] = useState<VoiceNoteResult | null>(null);
+  const [viewNote, setViewNote] = useState<Note | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   // Load notes on component mount
   useEffect(() => {
@@ -105,6 +108,11 @@ export default function NotesPage() {
   const handleEditNote = (note: Note) => {
     setEditNote(note);
     setIsCreateDialogOpen(true);
+  };
+
+  const handleViewNote = (note: Note) => {
+    setViewNote(note);
+    setIsViewModalOpen(true);
   };
 
   const handleCloseDialog = () => {
@@ -247,6 +255,7 @@ export default function NotesPage() {
                 note={note}
                 onEdit={handleEditNote}
                 onDelete={deleteNote}
+                onView={handleViewNote}
               />
             ))}
           </div>
@@ -286,6 +295,15 @@ export default function NotesPage() {
             description: voiceNoteData.description,
             created_at: ''
           } : null)}
+        />
+
+        {/* Note View Modal */}
+        <NoteViewModal
+          note={viewNote}
+          open={isViewModalOpen}
+          onOpenChange={setIsViewModalOpen}
+          onEdit={handleEditNote}
+          onDelete={deleteNote}
         />
       </div>
     </div>
