@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import { Plus, Clock, Play, Square, CheckCircle, MessageSquare, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -131,6 +132,7 @@ async function deleteTaskAPI(taskId: string): Promise<void> {
   if (!result.success) throw new Error(result.error);
 }
 export default function Home() {
+  const { data: session } = useSession();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
@@ -291,7 +293,7 @@ export default function Home() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-4xl font-bold text-yellow-400">TaskMaster</h1>
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
             <Link href="/timeline">
               <Button 
                 variant="outline"
@@ -325,6 +327,15 @@ export default function Home() {
               <Plus className="w-4 h-4 mr-2" />
               Start Task Now
             </Button>
+            {session?.user && (
+              <Button
+                onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                variant="outline"
+                className="border-red-400 text-red-400 hover:bg-red-400 hover:text-black font-semibold ml-2"
+              >
+                Logout
+              </Button>
+            )}
           </div>
         </div>
 
