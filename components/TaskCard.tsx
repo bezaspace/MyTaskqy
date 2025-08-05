@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Clock, MessageSquare, CheckCircle, Calendar, Timer, Play, Edit2, Trash2, Save, X } from 'lucide-react';
+import { VoiceInput } from './VoiceInput';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -217,7 +218,7 @@ export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onD
 
         {/* Add Log Input (for scheduled and in-progress tasks) */}
         {(task.status === 'scheduled' || task.status === 'in-progress') && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <Input
               placeholder="Add a log entry..."
               value={newLogMessage}
@@ -232,6 +233,14 @@ export function TaskCard({ task, onComplete, onStart, onAddLog, onUpdateLog, onD
             >
               Add
             </Button>
+            <VoiceInput
+              onTranscription={(transcription) => {
+                if (transcription && transcription.trim()) {
+                  onAddLog(task.id, transcription.trim());
+                }
+              }}
+              disabled={false}
+            />
           </div>
         )}
 
