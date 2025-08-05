@@ -1,4 +1,53 @@
-import { initializeSQLiteDatabase, migrateFromJSON, DatabaseConnection } from './sqlite-setup';
+import { supabase } from './supabase';
+
+// Helper functions to map between camelCase (API) and lowercase (database)
+function taskToDb(task: Partial<Task>): any {
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    starttime: task.startTime,
+    scheduledstarttime: task.scheduledStartTime,
+    scheduledendtime: task.scheduledEndTime,
+    completedtime: task.completedTime,
+    elapsedtime: task.elapsedTime
+  };
+}
+
+function taskFromDb(dbTask: any): Task {
+  return {
+    id: dbTask.id,
+    title: dbTask.title,
+    description: dbTask.description,
+    status: dbTask.status,
+    startTime: dbTask.starttime,
+    scheduledStartTime: dbTask.scheduledstarttime,
+    scheduledEndTime: dbTask.scheduledendtime,
+    completedTime: dbTask.completedtime,
+    elapsedTime: dbTask.elapsedtime
+  };
+}
+
+function taskLogToDb(log: Partial<TaskLog>): any {
+  return {
+    id: log.id,
+    taskid: log.taskId,
+    message: log.message,
+    timestamp: log.timestamp,
+    iseditable: log.isEditable
+  };
+}
+
+function taskLogFromDb(dbLog: any): TaskLog {
+  return {
+    id: dbLog.id,
+    taskId: dbLog.taskid,
+    message: dbLog.message,
+    timestamp: dbLog.timestamp,
+    isEditable: dbLog.iseditable
+  };
+}
 
 export interface Task {
   id: string;
@@ -25,235 +74,168 @@ export interface TaskWithLogs extends Task {
 }
 
 class TaskDatabase {
-  private connection: DatabaseConnection | null = null;
-
   constructor() {
-    this.initializeDatabase();
+    // No initialization needed for Supabase
   }
 
   public async initializeDatabase() {
-    try {
-      this.connection = await initializeSQLiteDatabase();
-      await migrateFromJSON(this.connection);
-    } catch (error) {
-      console.error('Error initializing database:', error);
-      throw error;
-    }
-  }
-
-  private async ensureConnection(): Promise<DatabaseConnection> {
-    if (!this.connection) {
-      this.connection = await initializeSQLiteDatabase();
-    }
-    return this.connection;
+    // No initialization needed for Supabase - tables should already exist
+    console.log('Database initialized (Supabase)');
   }
 
   // Task operations
   async createTask(task: Task): Promise<Task> {
-    const connection = await this.ensureConnection();
+    const dbTask = taskToDb(task);
+    // Filter out undefined values
+    const filteredTask = Object.fromEntries(
+      Object.entries(dbTask).filter(([_, value]) => value !== undefined)
+    );
 
-    return new Promise((resolve, reject) => {
-      const stmt = connection.db.prepare(`
-        INSERT INTO tasks (id, title, description, status, startTime, scheduledStartTime, scheduledEndTime, completedTime, elapsedTime)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+    const { error } = await supabase
+      .from('tasks')
+      .insert(filteredTask);
 
-      stmt.run([
-        task.id,
-        task.title,
-        task.description,
-        task.status,
-        task.startTime,
-        task.scheduledStartTime || null,
-        task.scheduledEndTime || null,
-        task.completedTime || null,
-        task.elapsedTime
-      ], function (err) {
-        stmt.finalize();
-        if (err) {
-          reject(err);
-        } else {
-          resolve(task);
-        }
-      });
-    });
+    if (error) {
+      throw error;
+    }
+
+    return task;
   }
 
   async getAllTasksWithLogs(): Promise<TaskWithLogs[]> {
-    const connection = await this.ensureConnection();
+    const { data: tasks, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .order('starttime', { ascending: false });
 
-    return new Promise((resolve, reject) => {
-      connection.db.all(`
-        SELECT * FROM tasks 
-        ORDER BY startTime DESC
-      `, async (err, tasks: any[]) => {
-        if (err) {
-          reject(err);
-          return;
-        }
+    if (error) {
+      throw error;
+    }
 
-        try {
-          const tasksWithLogs = await Promise.all(
-            tasks.map(async task => ({
-              ...task,
-              logs: await this.getTaskLogs(task.id)
-            }))
-          );
-          resolve(tasksWithLogs);
-        } catch (error) {
-          reject(error);
-        }
-      });
-    });
+    const tasksWithLogs = await Promise.all(
+      (tasks || []).map(async dbTask => {
+        const task = taskFromDb(dbTask);
+        return {
+          ...task,
+          logs: await this.getTaskLogs(task.id)
+        };
+      })
+    );
+
+    return tasksWithLogs;
   }
 
   async getTaskById(id: string): Promise<Task | null> {
-    const connection = await this.ensureConnection();
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    return new Promise((resolve, reject) => {
-      connection.db.get(`
-        SELECT * FROM tasks WHERE id = ?
-      `, [id], (err, task: any) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(task || null);
-        }
-      });
-    });
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null; // No rows found
+      }
+      throw error;
+    }
+
+    return taskFromDb(data);
   }
 
   async updateTask(id: string, updates: Partial<Task>): Promise<boolean> {
-    const connection = await this.ensureConnection();
+    const dbUpdates = taskToDb(updates);
+    // Filter out undefined values
+    const filteredUpdates = Object.fromEntries(
+      Object.entries(dbUpdates).filter(([_, value]) => value !== undefined)
+    );
 
-    return new Promise((resolve, reject) => {
-      // Build dynamic UPDATE query based on provided updates
-      const fields = Object.keys(updates).filter(key => updates[key as keyof Task] !== undefined);
-      if (fields.length === 0) {
-        resolve(false);
-        return;
-      }
+    if (Object.keys(filteredUpdates).length === 0) {
+      return false;
+    }
 
-      const setClause = fields.map(field => `${field} = ?`).join(', ');
-      const values = fields.map(field => updates[field as keyof Task]);
-      values.push(id);
+    const { error } = await supabase
+      .from('tasks')
+      .update(filteredUpdates)
+      .eq('id', id);
 
-      const stmt = connection.db.prepare(`
-        UPDATE tasks SET ${setClause} WHERE id = ?
-      `);
+    if (error) {
+      throw error;
+    }
 
-      stmt.run(values, function (err) {
-        stmt.finalize();
-        if (err) {
-          reject(err);
-        } else {
-          resolve(this.changes > 0);
-        }
-      });
-    });
+    return true;
   }
 
   async deleteTask(id: string): Promise<boolean> {
-    const connection = await this.ensureConnection();
+    // Delete task logs first (due to foreign key constraint)
+    await supabase
+      .from('task_logs')
+      .delete()
+      .eq('taskid', id);
 
-    return new Promise((resolve, reject) => {
-      // SQLite will handle CASCADE deletion of logs due to foreign key constraint
-      const stmt = connection.db.prepare(`
-        DELETE FROM tasks WHERE id = ?
-      `);
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', id);
 
-      stmt.run([id], function (err) {
-        stmt.finalize();
-        if (err) {
-          reject(err);
-        } else {
-          resolve(this.changes > 0);
-        }
-      });
-    });
+    if (error) {
+      throw error;
+    }
+
+    return true;
   }
 
   // Task log operations
   async getTaskLogs(taskId: string): Promise<TaskLog[]> {
-    const connection = await this.ensureConnection();
+    const { data, error } = await supabase
+      .from('task_logs')
+      .select('*')
+      .eq('taskid', taskId)
+      .order('timestamp', { ascending: true });
 
-    return new Promise((resolve, reject) => {
-      connection.db.all(`
-        SELECT * FROM task_logs 
-        WHERE taskId = ? 
-        ORDER BY timestamp ASC
-      `, [taskId], (err, logs: any[]) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(logs || []);
-        }
-      });
-    });
+    if (error) {
+      throw error;
+    }
+
+    return (data || []).map(taskLogFromDb);
   }
 
   async addTaskLog(log: TaskLog): Promise<TaskLog> {
-    const connection = await this.ensureConnection();
+    const dbLog = taskLogToDb(log);
+    const { error } = await supabase
+      .from('task_logs')
+      .insert(dbLog);
 
-    return new Promise((resolve, reject) => {
-      const stmt = connection.db.prepare(`
-        INSERT INTO task_logs (id, taskId, message, timestamp, isEditable)
-        VALUES (?, ?, ?, ?, ?)
-      `);
+    if (error) {
+      throw error;
+    }
 
-      stmt.run([
-        log.id,
-        log.taskId,
-        log.message,
-        log.timestamp,
-        log.isEditable
-      ], function (err) {
-        stmt.finalize();
-        if (err) {
-          reject(err);
-        } else {
-          resolve(log);
-        }
-      });
-    });
+    return log;
   }
 
   async updateTaskLog(logId: string, message: string): Promise<boolean> {
-    const connection = await this.ensureConnection();
+    const { error } = await supabase
+      .from('task_logs')
+      .update({ message })
+      .eq('id', logId);
 
-    return new Promise((resolve, reject) => {
-      const stmt = connection.db.prepare(`
-        UPDATE task_logs SET message = ? WHERE id = ?
-      `);
+    if (error) {
+      throw error;
+    }
 
-      stmt.run([message, logId], function (err) {
-        stmt.finalize();
-        if (err) {
-          reject(err);
-        } else {
-          resolve(this.changes > 0);
-        }
-      });
-    });
+    return true;
   }
 
   async deleteTaskLog(logId: string): Promise<boolean> {
-    const connection = await this.ensureConnection();
+    const { error } = await supabase
+      .from('task_logs')
+      .delete()
+      .eq('id', logId);
 
-    return new Promise((resolve, reject) => {
-      const stmt = connection.db.prepare(`
-        DELETE FROM task_logs WHERE id = ?
-      `);
+    if (error) {
+      throw error;
+    }
 
-      stmt.run([logId], function (err) {
-        stmt.finalize();
-        if (err) {
-          reject(err);
-        } else {
-          resolve(this.changes > 0);
-        }
-      });
-    });
+    return true;
   }
 
   // Helper methods for specific operations
@@ -275,10 +257,7 @@ class TaskDatabase {
   }
 
   async close() {
-    if (this.connection) {
-      await this.connection.close();
-      this.connection = null;
-    }
+    // No cleanup needed for Supabase client
   }
 }
 
