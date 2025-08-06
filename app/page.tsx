@@ -56,11 +56,11 @@ async function fetchTasks(): Promise<Task[]> {
   }));
 }
 
-async function createTaskAPI(title: string, description: string): Promise<void> {
+async function createTaskAPI(title: string, description: string, scheduledStartTime?: string, scheduledEndTime?: string): Promise<void> {
   const response = await fetch('/api/tasks', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, description })
+    body: JSON.stringify({ title, description, scheduledStartTime, scheduledEndTime })
   });
   const result = await response.json();
   if (!result.success) throw new Error(result.error);
@@ -73,8 +73,9 @@ async function scheduleTaskAPI(title: string, description: string, scheduledStar
     body: JSON.stringify({ 
       title, 
       description, 
-      scheduledStart: scheduledStart.toISOString(), 
-      scheduledEnd: scheduledEnd.toISOString() 
+      // Align with backend contract: expects scheduledStartTime / scheduledEndTime
+      scheduledStartTime: scheduledStart.toISOString(), 
+      scheduledEndTime: scheduledEnd.toISOString() 
     })
   });
   const result = await response.json();
@@ -204,9 +205,9 @@ export default function Home() {
     }
   };
 
-  const createTask = async (title: string, description: string) => {
+  const createTask = async (title: string, description: string, scheduledStartTime?: string, scheduledEndTime?: string) => {
     try {
-      await createTaskAPI(title, description);
+      await createTaskAPI(title, description, scheduledStartTime, scheduledEndTime);
       await loadTasks(); // Refresh tasks
     } catch (error) {
       console.error('Failed to create task:', error);

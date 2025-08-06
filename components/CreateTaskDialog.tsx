@@ -10,20 +10,28 @@ import { Label } from '@/components/ui/label';
 interface CreateTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateTask: (title: string, description: string) => void;
+  onCreateTask: (title: string, description: string, scheduledStartTime?: string, scheduledEndTime?: string) => void;
 }
 
 export function CreateTaskDialog({ open, onOpenChange, onCreateTask }: CreateTaskDialogProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [scheduledStartTime, setScheduledStartTime] = useState('');
+  const [scheduledEndTime, setScheduledEndTime] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (title.trim()) {
-      onCreateTask(title, description);
+      onCreateTask(
+        title,
+        description,
+        scheduledStartTime ? new Date(scheduledStartTime).toISOString() : undefined,
+        scheduledEndTime ? new Date(scheduledEndTime).toISOString() : undefined
+      );
       setTitle('');
       setDescription('');
+      setScheduledStartTime('');
+      setScheduledEndTime('');
       onOpenChange(false);
     }
   };
@@ -51,7 +59,6 @@ export function CreateTaskDialog({ open, onOpenChange, onCreateTask }: CreateTas
               required
             />
           </div>
-          
           <div>
             <Label htmlFor="description" className="text-gray-300">
               Description
@@ -64,7 +71,30 @@ export function CreateTaskDialog({ open, onOpenChange, onCreateTask }: CreateTas
               className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500 mt-1 min-h-[100px]"
             />
           </div>
-          
+          <div>
+            <Label htmlFor="scheduledStartTime" className="text-gray-300">
+              Scheduled Start Time
+            </Label>
+            <Input
+              id="scheduledStartTime"
+              type="datetime-local"
+              value={scheduledStartTime}
+              onChange={(e) => setScheduledStartTime(e.target.value)}
+              className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500 mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="scheduledEndTime" className="text-gray-300">
+              Scheduled End Time
+            </Label>
+            <Input
+              id="scheduledEndTime"
+              type="datetime-local"
+              value={scheduledEndTime}
+              onChange={(e) => setScheduledEndTime(e.target.value)}
+              className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500 mt-1"
+            />
+          </div>
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Button 
               type="button" 
